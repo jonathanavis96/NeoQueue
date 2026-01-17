@@ -180,7 +180,7 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
     - Escape-to-clear/cancel
     - Tab/Shift+Tab focus traversal when autocomplete suggestions are not open
 
-- [ ] **Task 27.3:** QA pass: spellcheck + keyboard behavior
+- [x] **Task 27.3:** QA pass: spellcheck + keyboard behavior
   - Verify red-underlines are gone in authoring inputs for technical tokens (e.g., `src/main.ts`, `AGENTS.md`, `userId`).
   - Verify SearchBox behavior unchanged.
 
@@ -227,6 +227,14 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
 **2026-01-17 (Build Iteration): Task 25.1 experimental flags (minimal)**
 - Added `experimentalFlags` helper in renderer, backed by Vite env: `VITE_EXPERIMENTAL_CANVAS`.
 - Added `vite-env.d.ts` type declarations for `import.meta.env`.
+
+**2026-01-17 (Build Iteration): Task 27.3 spellcheck QA**
+- Confirmed authoring inputs have `spellCheck={false}`, `autoCorrect="off"`, `autoCapitalize="off"`:
+  - QuickCapture input
+  - Follow-up input (QueueItemCard)
+  - Canvas draft input
+- Confirmed SearchBox unchanged (still uses default browser spellcheck behavior).
+- Ran: `npm run type-check`, `npm run lint`.
 
 **2026-01-17 (Build Iteration): Task 25/25.2/25.3 Canvas prototype (flagged)**
 - Added `CanvasView` renderer prototype: click-to-create input at cursor, Enter to save (creates a normal QueueItem), Escape to cancel.
