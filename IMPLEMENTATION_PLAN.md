@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 14:12:28
+Last updated: 2026-01-17 14:35:28
 
 ## Current State
 
@@ -84,9 +84,9 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 ### Low Priority
 
-- [ ] **Task 15:** Reconcile THOUGHTS.md “canvas” concept vs current list UI
-  - Decide: keep list UI for v1 (recommended) vs implement click-to-create canvas.
-  - If keeping list: update THOUGHTS.md to reflect the chosen UX.
+- [x] **Task 15:** Reconcile THOUGHTS.md “canvas” concept vs current list UI
+  - Decided to **keep list UI for v1** (recommended).
+  - Updated THOUGHTS.md to reflect the chosen UX and mark canvas as a future direction.
 
 - [ ] **Task 20:** Window controls (always-on-top / pin)
   - Add an always-on-top toggle (pin button) and persist the preference.
@@ -102,6 +102,9 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 - [x] **Task 16:** Data integrity (undo + import)
 
 ## Discoveries & Notes
+
+**2026-01-17 (Planning update):**
+- Task 15 note: THOUGHTS.md has been updated to reflect the v1 **list-first** UX; the canvas model is now explicitly positioned as a future direction.
 
 **2026-01-17 (Planning update):**
 - THOUGHTS.md “Success Metrics” emphasize right-click copy+follow-up and a canvas UI; v1 intentionally ships a **list-first** UX. Task 18 is the lowest-risk way to approximate the right-click ergonomics without a full canvas rewrite.
