@@ -1,50 +1,52 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 14:35:28
+Last updated: 2026-01-17 14:47:30
 
 ## Current State
 
-**App status:** Core v1 is implemented and usable; remaining work is primarily **window behavior polish** + optional UX alignment with the more ambitious THOUGHTS.md canvas concept.
+**App status:** NeoQueue v1 core is implemented and usable. Remaining work is optional polish + future-direction features (canvas UI, autocomplete, etc.).
 
 **What exists today (verified in codebase):**
-- Electron main process + Vite/React renderer wired and working.
-- Persistence via `electron-store`:
-  - IPC save/load (`IPC_CHANNELS.SAVE_DATA`, `IPC_CHANNELS.LOAD_DATA`)
-  - Renderer hook (`useQueueData`) with optimistic updates + rollback on save failure
+- Electron main process + Vite/React renderer wired and working
+- Persistence via `electron-store` (IPC save/load) + renderer hook (`useQueueData`) with optimistic updates + rollback
 - Core queue workflow:
-  - Add item quickly (Enter-to-add)
-  - Copy item text (one-click)
+  - Quick capture (Enter-to-add)
+  - One-click copy
   - Follow-ups (expand/collapse + inline add)
-  - Completion workflow (Queue vs Discussed tabs)
-  - Delete items
+  - Completion workflow with tabs (**Queue** / **Discussed**)
+  - Delete
+  - Single-step Undo (Ctrl/Cmd+Z)
 - Search/filter:
-  - Header search box filters item text + follow-up text
-  - Ctrl/Cmd+F focuses search; Esc clears active search
+  - Header search filters item text + follow-up text
+  - Ctrl/Cmd+F focuses search; Esc clears
 - Power-user ergonomics:
-  - Ctrl/Cmd+N focuses new item input (renderer)
-  - Ctrl/Cmd+Z triggers single-step Undo (renderer)
+  - Ctrl/Cmd+N focuses new-item input (renderer)
   - Global shortcuts: Ctrl/Cmd+Shift+N (show + focus new item), Ctrl/Cmd+Shift+Q (toggle window)
   - System tray menu + double-click to show window
-- Matrix polish:
-  - Optional scanline/CRT overlay (default off) persisted in `localStorage`
-  - Brief pulse/glitch animations on key actions (add/copy/complete/restore)
+  - Close-to-tray option (persisted) + always-on-top (pin) toggle (persisted)
+  - Window bounds persistence + multi-monitor-safe restore
 - Data integrity:
-  - Export JSON + Markdown via Electron save dialog (Help panel buttons)
+  - Export JSON + Markdown via Electron save dialogs
   - Import JSON via Electron open dialog + overwrite confirmation
   - Best-effort debounced secondary backup to `Documents/NeoQueue Backups/backup-latest.json`
-- Onboarding & docs:
-  - In-app, dismissible Help panel (first-run + manual open)
-  - README updated with screenshot, shortcuts, tray behavior, packaging notes
-  - NEURONS.md codebase map present
+- UX polish:
+  - Matrix theme + optional scanline/CRT overlay (persisted)
+  - Brief pulse/glitch animations on key actions
+  - Lightweight in-app startup banner: `[ N items in your Queue / M Discussed ]`
+  - Right-click item: copy text + open/focus follow-up input
 - Packaging readiness:
-  - electron-builder config works; app/tray icons wired; `npm run package` produces artifacts (validated on Linux)
+  - electron-builder config works; `npm run package` produces artifacts (validated on Linux)
 
 **Known spec divergence (intentional for v1):**
-- THOUGHTS.md describes a **canvas / click-to-create** UI and **right-click copy + follow-up** flow.
-- Current app is intentionally **list-first** (faster to ship, already meets practical MVP goals).
+- THOUGHTS.md originally described a canvas/click-to-create interface. v1 intentionally ships a **list-first** UX; the canvas concept remains a possible future direction.
 
-**Remaining notable gaps (as of this plan update):**
-- (Window state persistence + multi-monitor fallback implemented as part of Task 17.)
+**Remaining notable gaps (for future work):**
+- No canvas UI / click-to-create flow
+- No tab-autocomplete / learned dictionary
+- No code-aware spellcheck/autocorrect tuning beyond the browser defaults
+- Export scoping (active-only/completed-only/date range) not implemented
+- Optional OS-level notifications are not implemented (and likely out-of-scope for v1)
+
 
 ## Goal
 
@@ -52,44 +54,34 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 ## Prioritized Tasks
 
-### High Priority
+### High Priority (v1 stability / release blockers)
 
-- [x] **Task 17:** Window behavior polish
-  - [x] Add a **close-to-tray** option (intercept window close event and hide instead)
-    - Persist setting (implemented via `electron-store`, toggled via tray menu)
-  - [x] Remember window size/position across restarts (`BrowserWindow.getBounds()` → persist → restore)
-  - [x] Ensure behavior is sane on multi-monitor changes (fallback to centered default)
+- [x] **Task 21:** Run full release validation pass on at least one target OS
+  - Validate: `npm run type-check`, `npm run lint`, `npm run build`, `npm run package`
+  - Smoke test packaged artifact: persistence, tray, global shortcuts, import/export.
+  - Capture any platform-specific issues as follow-up tasks.
 
-### Medium Priority
+### Medium Priority (optional v1 polish)
 
-- [x] **Task 18:** “Right-click copy + follow-up” ergonomics (list-first compatible)
-  - Optional alternative to the canvas spec: add a context-menu/right-click action on an item to copy text and auto-open the follow-up input.
-  - Keep existing one-click copy button.
+- [ ] **Task 22:** Export scoping options
+  - Add export variants: Active-only / Discussed-only (date range optional).
+  - Keep existing Export JSON/Markdown buttons as “All data”.
 
-- [x] **Task 19:** Lightweight startup notification text (in-app)
-  - Goal: On app launch (after data loads), briefly show a Matrix-flavored in-app message like **“[ 7 items in your Queue ]”**.
-  - Non-goals: no OS-level notifications; no background/tray popups.
-  - Recommended UX (low risk):
-    - Render a small banner **inside the main content** (ideal placement: just below `QuickCapture` and above the error box / list).
-    - Show only when there is at least 1 active (non-discussed) item.
-    - Show once per session (do not persist; just a startup hint).
-    - Auto-dismiss after ~3–5 seconds and/or allow manual dismiss (✕).
-    - Optional: vary message if there are discussed items too (e.g. “7 in Queue / 3 Discussed”).
-  - Acceptance criteria:
-    - Banner appears only after initial load completes (`isLoading` false), and does not flicker while loading.
-    - Banner text uses existing Matrix styling conventions (monospace, green-on-dark) and is unobtrusive.
-    - No console errors; no impact on existing shortcuts/focus behaviors.
-  - Notes:
-    - Empty states are already implemented in `QueueItemList` (including “No Results” and per-tab empty states); this task is strictly the startup “pending count” hint.
+- [ ] **Task 23:** Improve first-run/onboarding copy
+  - Tighten Help panel text + ensure it stays accurate as shortcuts/settings evolve.
+  - Consider adding a small “Settings” section (close-to-tray, always-on-top, scanlines).
 
-### Low Priority
+- [ ] **Task 24:** Hardening: add defensive migrations for `AppState.version`
+  - Ensure app can load older exported JSON cleanly as schema evolves.
 
-- [x] **Task 15:** Reconcile THOUGHTS.md “canvas” concept vs current list UI
-  - Decided to **keep list UI for v1** (recommended).
-  - Updated THOUGHTS.md to reflect the chosen UX and mark canvas as a future direction.
+### Low Priority (future direction)
 
-- [x] **Task 20:** Window controls (always-on-top / pin)
-  - Add an always-on-top toggle (pin button) and persist the preference.
+- [ ] **Task 25:** Canvas prototype (click-to-create) behind a feature flag
+  - Keep list-first as default; do not destabilize v1.
+
+- [ ] **Task 26:** Tab-autocomplete + learned dictionary (THOUGHTS.md)
+
+- [ ] **Task 27:** Code-aware spellcheck/autocorrect tuning (THOUGHTS.md)
 
 ---
 
@@ -103,16 +95,18 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 ## Discoveries & Notes
 
+**2026-01-17 (Build Iteration): Task 21 release validation pass**
+- Ran: `npm run type-check`, `npm run lint`, `npm run build`, `npm run package` (Linux/WSL2).
+- Packaging succeeded and produced `release/NeoQueue-1.0.0.AppImage` and `release/linux-unpacked/resources/app.asar`.
+- Note: electron-builder warns about macOS category mapping on Linux; benign.
+
 **2026-01-17 (Planning update):**
 - Task 15 note: THOUGHTS.md has been updated to reflect the v1 **list-first** UX; the canvas model is now explicitly positioned as a future direction.
 
 **2026-01-17 (Planning update):**
 - THOUGHTS.md “Success Metrics” emphasize right-click copy+follow-up and a canvas UI; v1 intentionally ships a **list-first** UX. Task 18 is the lowest-risk way to approximate the right-click ergonomics without a full canvas rewrite.
 - Task 19 note: Matrix-flavored empty states are already present in `src/renderer/components/QueueItemList.tsx` + `.queue-list-empty` styles. The only remaining scope is the optional in-app startup “N items in your Queue” text.
-- Window code (`src/main/main.ts`) currently:
-  - Creates the window with fixed defaults (800x600) and no bounds persistence.
-  - Implements close-to-tray by intercepting `BrowserWindow#close` when a tray exists and the setting is enabled.
-  - Does not use `screen` APIs yet, so multi-monitor edge cases are not handled.
+- Window behavior (historical note): previous plan iterations noted missing bounds persistence; this has since been implemented (bounds + maximize state + multi-monitor-safe restore).
 
 **2026-01-17 (Build Iteration): Task 14 Matrix polish effects**
 - Added CSS scanline/CRT overlay (default off) via `.app.scanlines-enabled` pseudo-elements.
