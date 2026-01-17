@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 15:28:16
+Last updated: 2026-01-17 15:38:23
 
 ## Current State
 
@@ -146,7 +146,7 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
   - Same key precedence rules as QuickCapture.
   - Must not interfere with Enter-to-submit and Escape-to-clear.
 
-- [ ] **Task 26.4.3:** Integrate autocomplete into Canvas draft input (CanvasView)
+- [x] **Task 26.4.3:** Integrate autocomplete into Canvas draft input (CanvasView)
   - Only when Canvas is enabled.
   - Ensure Esc still cancels draft when suggestions are not open.
 

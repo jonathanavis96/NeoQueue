@@ -2,12 +2,17 @@ import React, {
   forwardRef,
   useCallback,
   useEffect,
+  useId,
   useImperativeHandle,
   useMemo,
   useRef,
   useState,
 } from 'react';
 import type { QueueItem } from '../../shared/types';
+import { extractLearnedTokens } from '../../shared/dictionary';
+import { experimentalFlags } from '../experimentalFlags';
+import { useAutocomplete } from '../hooks';
+import { AutocompletePopover } from './AutocompletePopover';
 import './CanvasView.css';
 
 export interface CanvasViewRef {
@@ -44,7 +49,29 @@ export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(({ items, o
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [cursor, setCursor] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const dictionary = useMemo(() => extractLearnedTokens(items), [items]);
+  const popoverId = useId();
+
+  const { state: acState, handleKeyDown: handleAutocompleteKeyDown } = useAutocomplete({
+    value: draft?.text ?? '',
+    cursor,
+    dictionary,
+    enabled: experimentalFlags.autocomplete,
+  });
+
+  const activeDescendantId = acState.isOpen
+    ? `${popoverId}-opt-${Math.max(0, Math.min(acState.selectedIndex, acState.suggestions.length - 1))}`
+    : undefined;
+
+  const syncCursorFromDom = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const next = el.selectionStart ?? el.value.length;
+    setCursor(next);
+  }, []);
 
   const openAt = useCallback((clientX: number, clientY: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -54,6 +81,7 @@ export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(({ items, o
     const y = clamp(clientY - rect.top, 12, rect.height - 40);
 
     setDraft({ x, y, text: '' });
+    setCursor(0);
   }, []);
 
   const openAtCenter = useCallback(() => {
@@ -79,6 +107,13 @@ export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(({ items, o
     return () => window.clearTimeout(id);
   }, [draft]);
 
+  useEffect(() => {
+    // Keep cursor state in sync when opening a fresh draft.
+    if (!draft) return;
+    window.requestAnimationFrame(() => syncCursorFromDom());
+  }, [draft, syncCursorFromDom]);
+
+
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
     if (isLoading) return;
 
@@ -89,8 +124,22 @@ export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(({ items, o
     openAt(e.clientX, e.clientY);
   }, [isLoading, openAt]);
 
-  const handleKeyDown = useCallback(async (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback(async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!draft) return;
+
+    const result = handleAutocompleteKeyDown(e);
+    if (result.handled) {
+      if (result.accept) {
+        const accept = result.accept;
+        setDraft({ ...draft, text: accept.nextValue });
+        window.requestAnimationFrame(() => {
+          if (!inputRef.current) return;
+          inputRef.current.setSelectionRange(accept.nextCursor, accept.nextCursor);
+          setCursor(accept.nextCursor);
+        });
+      }
+      return;
+    }
 
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -111,7 +160,7 @@ export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(({ items, o
         setIsSubmitting(false);
       }
     }
-  }, [draft, isSubmitting, isLoading, onAddItem]);
+  }, [draft, handleAutocompleteKeyDown, isSubmitting, isLoading, onAddItem]);
 
   const layout = useMemo(() => {
     // No layout persistence in the prototype. We still want items visible on the canvas,
@@ -153,17 +202,32 @@ export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(({ items, o
         {draft && (
           <div className="canvas-draft" style={{ left: draft.x, top: draft.y }}>
             <span className="canvas-draft-prompt" aria-hidden="true">&gt;</span>
-            <input
-              ref={inputRef}
-              className="canvas-draft-input"
-              type="text"
-              value={draft.text}
-              onChange={(e) => setDraft({ ...draft, text: e.target.value })}
-              onKeyDown={handleKeyDown}
-              placeholder="Type and press Enter..."
-              disabled={isSubmitting || isLoading}
-              aria-label="New discussion item"
-            />
+            <div className="canvas-draft-input-wrap">
+              <input
+                ref={inputRef}
+                className="canvas-draft-input"
+                type="text"
+                value={draft.text}
+                onChange={(e) => {
+                  setDraft({ ...draft, text: e.target.value });
+                  syncCursorFromDom();
+                }}
+                onKeyDown={handleKeyDown}
+                onSelect={syncCursorFromDom}
+                onKeyUp={syncCursorFromDom}
+                placeholder="Type and press Enter..."
+                disabled={isSubmitting || isLoading}
+                aria-label="New discussion item"
+                aria-controls={acState.isOpen ? popoverId : undefined}
+                aria-activedescendant={activeDescendantId}
+              />
+              <AutocompletePopover
+                id={popoverId}
+                suggestions={acState.suggestions}
+                selectedIndex={acState.selectedIndex}
+                isOpen={acState.isOpen}
+              />
+            </div>
           </div>
         )}
       </div>

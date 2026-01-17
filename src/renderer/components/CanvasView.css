@@ -68,6 +68,10 @@
   font-family: var(--font-mono);
 }
 
+.canvas-draft-input-wrap {
+  position: relative;
+}
+
 .canvas-draft-input {
   width: 320px;
   max-width: min(55vw, 420px);
