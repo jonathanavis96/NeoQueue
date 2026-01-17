@@ -54,7 +54,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 ### High Priority
 
-- [ ] **Task 17:** Window behavior polish
+- [x] **Task 17:** Window behavior polish
   - [x] Add a **close-to-tray** option (intercept window close event and hide instead)
     - Persist setting (implemented via `electron-store`, toggled via tray menu)
   - [x] Remember window size/position across restarts (`BrowserWindow.getBounds()` → persist → restore)
