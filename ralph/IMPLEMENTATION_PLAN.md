@@ -64,7 +64,7 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
   - Full regression test after update: app launch, IPC, tray, global shortcuts, window controls
   - Validation: `npm run dev`, `npm run build`, `npm run package` all succeed
 
-- [ ] **Task 36:** Update Vite/esbuild (fixes dev server request vulnerability - GHSA-67mh-4wv8-2f99)
+- [x] **Task 36:** Update Vite/esbuild (fixes dev server request vulnerability - GHSA-67mh-4wv8-2f99)
   - Current: vite@5.0.10 (vulnerable to path traversal in dev server)
   - Target: vite@6.1.7+ or latest stable in 6.x
   - Review breaking changes: Vite 5 → 6 migration guide
@@ -188,6 +188,17 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
   - `npm run dev` ✓ (app launches and runs correctly)
 - No breaking API changes required between v28 → v35.7.5
 - All core functionality verified: IPC, persistence, tray, shortcuts, window controls
+
+**2026-01-17 (Build): Task 36 complete**
+- Vite updated to v6.4.1 (fixes GHSA-67mh-4wv8-2f99 dev server path traversal vulnerability)
+- @vitejs/plugin-react updated to v5.1.2 (compatible with Vite 6.x)
+- Full validation suite passed:
+  - `npm run type-check` ✓ (no type errors)
+  - `npm run lint` ✓ (no linting errors)
+  - `npm run build` ✓ (vite build succeeded in 686ms)
+  - `npm run dev:vite` ✓ (dev server starts successfully, hot reload active)
+- No vite.config.ts changes required - configuration compatible with Vite 6.x
+- Vite 5 → 6 migration was seamless, no breaking API changes affected this project
 
 ---
 
