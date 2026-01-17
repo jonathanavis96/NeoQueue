@@ -93,6 +93,24 @@
   opacity: 0.9;
 }
 
+.app-pin-button {
+  width: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0;
+}
+
+.app-pin-button.is-pinned {
+  border-color: var(--matrix-green);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.18);
+}
+
+.app-pin-glyph {
+  font-size: 14px;
+  line-height: 1;
+}
+
 .app-help-button:hover {
   border-color: var(--matrix-green-dim);
   opacity: 1;

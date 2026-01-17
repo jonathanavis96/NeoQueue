@@ -51,6 +51,13 @@ type AppSettings = {
    * Why: NeoQueue is tray-first and should keep running for quick capture.
    */
   closeToTray: boolean;
+
+  /**
+   * When true, keep the window above other windows.
+   *
+   * Why: Some users prefer a "pinned" queue during 1:1s.
+   */
+  alwaysOnTop: boolean;
 };
 
 type WindowState = {
@@ -80,6 +87,7 @@ const store = new Store<StoreSchema>({
     },
     settings: {
       closeToTray: false,
+      alwaysOnTop: false,
     },
   },
 });
@@ -169,8 +177,19 @@ const getCloseToTraySetting = (): boolean => {
 
 const setCloseToTraySetting = (enabled: boolean): void => {
   store.set('settings', {
-    ...(store.get('settings') ?? { closeToTray: false }),
+    ...(store.get('settings') ?? { closeToTray: false, alwaysOnTop: false }),
     closeToTray: enabled,
+  });
+};
+
+const getAlwaysOnTopSetting = (): boolean => {
+  return Boolean(store.get('settings')?.alwaysOnTop);
+};
+
+const setAlwaysOnTopSetting = (enabled: boolean): void => {
+  store.set('settings', {
+    ...(store.get('settings') ?? { closeToTray: false, alwaysOnTop: false }),
+    alwaysOnTop: enabled,
   });
 };
 
@@ -253,6 +272,22 @@ ipcMain.handle(IPC_CHANNELS.LOAD_DATA, async () => {
 
 ipcMain.handle(IPC_CHANNELS.GET_VERSION, async () => {
   return app.getVersion();
+});
+
+ipcMain.handle(IPC_CHANNELS.GET_ALWAYS_ON_TOP, async () => {
+  return getAlwaysOnTopSetting();
+});
+
+ipcMain.handle(IPC_CHANNELS.SET_ALWAYS_ON_TOP, async (_event, enabled: boolean) => {
+  try {
+    const safeEnabled = Boolean(enabled);
+    setAlwaysOnTopSetting(safeEnabled);
+    mainWindow?.setAlwaysOnTop(safeEnabled);
+    tray?.setContextMenu(buildTrayMenu());
+    return { success: true, enabled: safeEnabled };
+  } catch (error) {
+    return { success: false, enabled: Boolean(enabled), error: String(error) };
+  }
 });
 
 ipcMain.handle(IPC_CHANNELS.EXPORT_JSON, async (_event, data: AppState) => {
@@ -513,6 +548,8 @@ const createWindow = (): void => {
     minWidth: 400,
     minHeight: 300,
     backgroundColor: '#0a0a0a',
+    // Apply persisted "pin" setting at creation time.
+    alwaysOnTop: getAlwaysOnTopSetting(),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -575,6 +612,55 @@ const createWindow = (): void => {
 /**
  * Create system tray icon with context menu
  */
+const buildTrayMenu = (): Electron.Menu => {
+  return Menu.buildFromTemplate([
+    {
+      label: 'Show NeoQueue',
+      click: () => {
+        showAndFocusWindow();
+      },
+    },
+    {
+      label: 'New Item (Ctrl+Shift+N)',
+      click: () => {
+        showAndFocusWindow();
+        // Send shortcut event to renderer
+        mainWindow?.webContents.send(IPC_CHANNELS.SHORTCUT_NEW_ITEM);
+      },
+    },
+    { type: 'separator' },
+    {
+      label: 'Always on top',
+      type: 'checkbox',
+      checked: getAlwaysOnTopSetting(),
+      click: (menuItem) => {
+        setAlwaysOnTopSetting(menuItem.checked);
+        mainWindow?.setAlwaysOnTop(menuItem.checked);
+        tray?.setContextMenu(buildTrayMenu());
+      },
+    },
+    {
+      label: 'Close to tray',
+      type: 'checkbox',
+      checked: getCloseToTraySetting(),
+      click: (menuItem) => {
+        setCloseToTraySetting(menuItem.checked);
+        tray?.setContextMenu(buildTrayMenu());
+      },
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      click: () => {
+        app.quit();
+      },
+    },
+  ]);
+};
+
+/**
+ * Create system tray icon with context menu
+ */
 const createTray = (): void => {
   const trayIcon = getTrayIcon();
 
@@ -596,40 +682,7 @@ const createTray = (): void => {
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
   tray.setToolTip('NeoQueue - Discussion Tracker');
   
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Show NeoQueue',
-      click: () => {
-        showAndFocusWindow();
-      },
-    },
-    {
-      label: 'New Item (Ctrl+Shift+N)',
-      click: () => {
-        showAndFocusWindow();
-        // Send shortcut event to renderer
-        mainWindow?.webContents.send(IPC_CHANNELS.SHORTCUT_NEW_ITEM);
-      },
-    },
-    { type: 'separator' },
-    {
-      label: 'Close to tray',
-      type: 'checkbox',
-      checked: getCloseToTraySetting(),
-      click: (menuItem) => {
-        setCloseToTraySetting(menuItem.checked);
-      },
-    },
-    { type: 'separator' },
-    {
-      label: 'Quit',
-      click: () => {
-        app.quit();
-      },
-    },
-  ]);
-  
-  tray.setContextMenu(contextMenu);
+  tray.setContextMenu(buildTrayMenu());
   
   // Double-click on tray icon shows window
   tray.on('double-click', () => {

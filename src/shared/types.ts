@@ -42,6 +42,9 @@ export const IPC_CHANNELS = {
   EXPORT_JSON: 'export-json',
   EXPORT_MARKDOWN: 'export-markdown',
   IMPORT_JSON: 'import-json',
+  // Window controls / settings
+  GET_ALWAYS_ON_TOP: 'get-always-on-top',
+  SET_ALWAYS_ON_TOP: 'set-always-on-top',
   // Keyboard shortcut events from main to renderer
   SHORTCUT_NEW_ITEM: 'shortcut:new-item',
   SHORTCUT_TOGGLE_WINDOW: 'shortcut:toggle-window',

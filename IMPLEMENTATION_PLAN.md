@@ -88,7 +88,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - Decided to **keep list UI for v1** (recommended).
   - Updated THOUGHTS.md to reflect the chosen UX and mark canvas as a future direction.
 
-- [ ] **Task 20:** Window controls (always-on-top / pin)
+- [x] **Task 20:** Window controls (always-on-top / pin)
   - Add an always-on-top toggle (pin button) and persist the preference.
 
 ---

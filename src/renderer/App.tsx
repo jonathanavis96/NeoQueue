@@ -25,6 +25,7 @@ const App: React.FC = () => {
   } = useQueueData();
 
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [isStartupBannerVisible, setIsStartupBannerVisible] = useState(false);
@@ -44,6 +45,28 @@ const App: React.FC = () => {
       // If localStorage is unavailable, fail open (help is safe).
       setIsHelpOpen(true);
     }
+  }, []);
+
+  // Sync "Always on top" state from the main process (single source of truth).
+  useEffect(() => {
+    let isMounted = true;
+
+    const load = async () => {
+      if (!window.electronAPI?.getAlwaysOnTop) return;
+
+      try {
+        const enabled = await window.electronAPI.getAlwaysOnTop();
+        if (isMounted) setIsAlwaysOnTop(Boolean(enabled));
+      } catch {
+        // If unavailable (e.g., during web-only rendering), leave default.
+      }
+    };
+
+    void load();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Lightweight startup notification banner (in-app)
@@ -151,6 +174,25 @@ const App: React.FC = () => {
               onClear={() => setSearchQuery('')}
               disabled={isLoading}
             />
+            <button
+              type="button"
+              className={`app-help-button app-pin-button ${isAlwaysOnTop ? 'is-pinned' : ''}`}
+              onClick={async () => {
+                if (!window.electronAPI?.setAlwaysOnTop) return;
+
+                try {
+                  const next = !isAlwaysOnTop;
+                  const res = await window.electronAPI.setAlwaysOnTop(next);
+                  if (res?.success) setIsAlwaysOnTop(Boolean(res.enabled));
+                } catch {
+                  // No-op; keep existing state.
+                }
+              }}
+              aria-label={isAlwaysOnTop ? 'Disable always-on-top' : 'Enable always-on-top'}
+              title={isAlwaysOnTop ? 'Always on top: ON' : 'Always on top: OFF'}
+            >
+              <span className="app-pin-glyph" aria-hidden="true">{isAlwaysOnTop ? 'PIN' : 'TOP'}</span>
+            </button>
             <button
               type="button"
               className="app-help-button"
