@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, nativeImage } from 'electron';
+import { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, nativeImage, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
@@ -78,6 +78,34 @@ ipcMain.handle(IPC_CHANNELS.LOAD_DATA, async () => {
 
 ipcMain.handle(IPC_CHANNELS.GET_VERSION, async () => {
   return app.getVersion();
+});
+
+ipcMain.handle(IPC_CHANNELS.EXPORT_JSON, async (_event, data: AppState) => {
+  try {
+    const defaultFileName = `neoqueue-export-${new Date().toISOString().slice(0, 10)}.json`;
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: 'Export NeoQueue data',
+      defaultPath: defaultFileName,
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+
+    if (canceled || !filePath) {
+      return { success: true, canceled: true };
+    }
+
+    const json = JSON.stringify(
+      data,
+      (_key, value) => (value instanceof Date ? value.toISOString() : value),
+      2
+    );
+
+    await fs.promises.writeFile(filePath, json, { encoding: 'utf8' });
+
+    return { success: true, filePath };
+  } catch (error) {
+    console.error('Failed to export JSON:', error);
+    return { success: false, error: String(error) };
+  }
 });
 
 const createWindow = (): void => {

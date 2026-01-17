@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 13:29:55
+Last updated: 2026-01-17 13:37:38
 
 ## Current State
 
@@ -79,11 +79,11 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - Prefer CSS-only (transform/opacity/text-shadow) and keep it under ~300ms.
   - Guardrails: no seizure-y flashing; keep 60fps; no layout thrash.
 
-- [ ] **Task 16:** Data integrity “nice-to-have” (post-v1 unless needed)
-  - Export current state as JSON (download/save via Electron main process)
-  - Optional: export Markdown (manager-friendly) with Active + Discussed sections
-  - Optional: debounced backup to a secondary location (Windows-safe pathing)
-  - Optional: undo (single-step) if it can be implemented safely
+- [x] **Task 16:** Data integrity “nice-to-have” (post-v1 unless needed)
+  - [x] Export current state as JSON (download/save via Electron main process)
+  - [ ] Optional: export Markdown (manager-friendly) with Active + Discussed sections
+  - [ ] Optional: debounced backup to a secondary location (Windows-safe pathing)
+  - [ ] Optional: undo (single-step) if it can be implemented safely
 
 ### Low Priority (Bigger Spec Items / Future)
 
@@ -113,6 +113,10 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 - Added in-app toggle in Help panel; persists in `localStorage` (`neoqueue.ui.effects.scanlines`).
 - Added brief (<= 300ms) pulse/glitch CSS animations on key actions: add, copy, mark discussed, restore.
 - Implemented a small `UiEffectsProvider` context to coordinate action pulses.
+
+**2026-01-17 (Build Iteration): Task 16 export JSON**
+- Added JSON export via Electron save dialog and IPC (`export-json`).
+- Exposed `window.electronAPI.exportJson` and added Help panel button.
 
 **2026-01-17 (Build Iteration): Task 13 two-tab UI**
 - Replaced the two-section list with tabs: **Queue** and **Discussed**.

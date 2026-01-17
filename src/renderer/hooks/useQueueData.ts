@@ -15,6 +15,7 @@ interface UseQueueDataResult {
   deleteItem: (id: string) => Promise<void>;
   toggleComplete: (id: string) => Promise<void>;
   addFollowUp: (itemId: string, text: string) => Promise<void>;
+  exportJson: () => Promise<void>;
 }
 
 // Generate a simple UUID (v4-like)
@@ -63,17 +64,22 @@ export const useQueueData = (): UseQueueDataResult => {
     loadData();
   }, []);
 
-  // Save data helper
-  const saveData = useCallback(async (newItems: QueueItem[]) => {
-    const appState: AppState = {
+  // Build AppState (used for save + export)
+  const buildAppState = useCallback((newItems: QueueItem[]): AppState => {
+    return {
       items: newItems,
       version: 1,
     };
+  }, []);
+
+  // Save data helper
+  const saveData = useCallback(async (newItems: QueueItem[]) => {
+    const appState = buildAppState(newItems);
     const response = await window.electronAPI.saveData(appState);
     if (!response.success) {
       throw new Error(response.error || 'Failed to save data');
     }
-  }, []);
+  }, [buildAppState]);
 
   // Add a new item
   const addItem = useCallback(async (text: string) => {
@@ -173,6 +179,18 @@ export const useQueueData = (): UseQueueDataResult => {
     }
   }, [items, saveData]);
 
+  const exportJson = useCallback(async () => {
+    try {
+      const response = await window.electronAPI.exportJson(buildAppState(items));
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to export JSON');
+      }
+    } catch (err) {
+      setError(String(err));
+      throw err;
+    }
+  }, [buildAppState, items]);
+
   return {
     items,
     isLoading,
@@ -182,5 +200,6 @@ export const useQueueData = (): UseQueueDataResult => {
     deleteItem,
     toggleComplete,
     addFollowUp,
+    exportJson,
   };
 };

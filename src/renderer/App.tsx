@@ -17,6 +17,7 @@ const App: React.FC = () => {
     toggleComplete,
     deleteItem,
     addFollowUp,
+    exportJson,
   } = useQueueData();
 
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -128,6 +129,16 @@ const App: React.FC = () => {
             // ignore
           }
           setIsHelpOpen(false);
+        }}
+        onExportJson={async () => {
+          try {
+            await exportJson();
+          } catch (e) {
+            // Keep the help panel open; surface error in app error box.
+            // useQueueData already sets error on failure paths.
+            // eslint-disable-next-line no-console
+            console.error(e);
+          }
         }}
         scanlinesEnabled={scanlinesEnabled}
         onToggleScanlines={setScanlinesEnabled}
