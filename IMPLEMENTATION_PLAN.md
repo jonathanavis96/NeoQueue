@@ -1,31 +1,38 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 13:12:53
+Last updated: 2026-01-17 13:18:15
 
 ## Current State
 
-**App status:** Phase 1 (Foundation) ✅ complete. Phase 2 (Core list-based workflow) ✅ complete. Entering Phase 3 (Polish, feature alignment with THOUGHTS.md, and distribution readiness).
+**App status:** Phase 3 (Polish) in progress. Core “list-first” workflow is implemented and usable; remaining work is primarily UX polish and optional feature alignment with the original (more ambitious) THOUGHTS.md canvas concept.
 
 **What exists today (verified):**
 - Electron main process + Vite/React renderer wired and working.
-- Persistent local storage via `electron-store` (save/load IPC + renderer hook with optimistic updates).
-- Queue workflow:
+- Persistence via `electron-store` (IPC save/load + renderer hook with optimistic updates/rollback).
+- Core queue workflow:
   - Add item quickly (Enter-to-add)
-  - One-click copy to clipboard
+  - Copy item text (one-click)
   - Follow-ups (expand/collapse + inline add)
-  - Completion workflow (Active vs Discussed sections)
+  - Completion workflow (Active vs Discussed)
+  - Delete items
 - Power-user ergonomics:
-  - Ctrl+N (renderer) focus input
-  - Ctrl+Shift+N (global) focus input
-  - Ctrl+Shift+Q (global) toggle window
+  - Ctrl/Cmd+N focuses new item input (renderer)
+  - Ctrl/Cmd+F focuses search; Esc clears active search
+  - Global shortcuts: Ctrl/Cmd+Shift+N (show + focus new item), Ctrl/Cmd+Shift+Q (toggle window)
   - System tray menu + double-click to show window
+- Onboarding & docs:
+  - In-app, dismissible Help panel (first-run + manual open)
+  - README updated with screenshot, shortcuts, tray behavior, packaging notes
+  - NEURONS.md codebase map present
+- Packaging readiness:
+  - electron-builder config works; app/tray icons wired; `npm run package` produces artifacts (validated on Linux)
 
-**Not yet implemented (from THOUGHTS.md / DoD):**
-- Real distribution assets (app icon + tray icon files wired to electron-builder).
-- NEURONS.md codebase map.
-- Onboarding/help and richer README (screenshot/GIF).
-- “Matrix polish” effects (scanlines/glitch/digital rain) and richer empty states.
-- Spec divergence: THOUGHTS.md describes a canvas + click-to-create / right-click copy+follow-up flow, plus two-tab UI and search/filter. Current app is list-first and does not implement canvas or search.
+**Known spec divergence (intentional for v1):**
+- THOUGHTS.md describes a **canvas / click-to-create** UI and **right-click copy + follow-up** flow.
+- Current app is intentionally **list-first** (faster to ship, already meets practical MVP goals). Future work may reconcile/align THOUGHTS.md with this direction.
+
+**Remaining notable gaps from THOUGHTS.md “data integrity” ideals:**
+- Undo, export, and automatic backups are not implemented (treat as post-v1 unless required).
 
 ## Goal
 
@@ -55,14 +62,10 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 ### Medium Priority (Feature Alignment / UX)
 
-- [x] **Task 12:** Add search/filter for items
-  - Add a search box (at least for Active; ideally both Active/Discussed)
-  - Real-time filter by item text + follow-up text
-  - Keep keyboard flow solid (Ctrl+F focuses search, Esc clears)
-
-- [ ] **Task 13:** Two-tab UI (Queue / Completed)
-  - Currently items are displayed as two sections in one scroll.
-  - Add a tab bar and persist selected tab (optional).
+- [x] **Task 13:** Two-tab UI (Queue / Discussed)
+  - Replace the two-section layout with a tab bar: **Queue** (active) and **Discussed** (completed).
+  - Optional: persist selected tab (localStorage) and restore on startup.
+  - Ensure keyboard flow remains solid (Tab order, shortcuts still work).
 
 - [ ] **Task 14:** Matrix polish effects (tasteful)
   - Add subtle scanline/CRT overlay (toggleable; default off)
@@ -86,14 +89,19 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 ## Discoveries & Notes
 
+**2026-01-17 (Planning update):**
+- THOUGHTS.md includes several “aspirational” features (canvas, right-click flow, auto-backup/undo/export) that diverge from the current shipped UI. The current app is intentionally *list-first* and already satisfies many practical MVP goals.
+- Two-tab UI is low-risk and aligns well with THOUGHTS.md without committing to the canvas concept; it should be the next UX iteration.
+- Data-integrity items (backup, undo, export) should be treated as post-v1 unless required; they add complexity and deserve careful design.
+
+**2026-01-17 (Build Iteration): Task 13 two-tab UI**
+- Replaced the two-section list with tabs: **Queue** and **Discussed**.
+- Persist selected tab in `localStorage` (`neoqueue.ui.selectedTab`).
+- Auto-switch tabs if filtering/search results leave the current tab empty.
+
 **2026-01-17 (Build Iteration): Task 12 search/filter**
 - Added header search box to filter items by item text and follow-up text.
 - Added Ctrl/Cmd+F to focus search and Esc to clear active search.
-
-**2026-01-17 (Planning update):**
-- THOUGHTS.md includes several “aspirational” features that diverge from the current shipped UI (canvas, right-click flow, backup/undo/export). Current app is a *list-first* workflow and already satisfies many practical MVP goals.
-- The biggest *user-facing* gap to shipping v1 is onboarding/documentation: README needs screenshots + current shortcut/tray info; app likely needs a minimal in-app “How to use” panel.
-- Data-integrity items in THOUGHTS.md (backup, undo, export) should be treated as post-v1 unless needed; they add complexity and should be tackled carefully.
 
 **2026-01-17 12:59 (Build Iteration):** Task 10 packaging validation complete:
 - Fixed electron-builder entry mismatch by compiling main process during build (`build` now runs `build:electron`) and pointing `package.json#main` at the actual output `dist/main/main/main.js`.
