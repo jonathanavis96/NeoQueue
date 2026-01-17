@@ -78,7 +78,7 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
   - Persist node positions; keep the underlying `QueueItem` model.
   - Maintain keyboard-first flows.
 
-- [ ] **Task 33:** Align search behavior with THOUGHTS.md (optional)
+- [x] **Task 33:** Align search behavior with THOUGHTS.md (optional)
   - Current: one global search query for the list view; does not clear on tab switch; searches item + follow-up text only.
   - Target: per-tab persisted search (clears when switching tabs) and optionally include timestamps in matches.
 
@@ -122,6 +122,10 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
 - Added Canvas layout persistence via `settings.canvasLayout.positions` (keyed by `QueueItem.id`, stored as `%` coordinates).
 - Canvas nodes are now draggable; drag updates are applied optimistically during drag and persisted on pointer release.
 - `CURRENT_APP_STATE_VERSION` bumped to 4; migration is best-effort and clamps invalid coordinates.
+
+**2026-01-17 (Build): Task 33 complete**
+- Search now clears when switching between Queue/Discussed tabs (including auto-switches).
+- Search matches now include item/follow-up timestamps (ISO strings) in addition to text.
 
 ---
 

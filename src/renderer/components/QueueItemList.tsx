@@ -17,6 +17,8 @@ interface QueueItemListProps {
   dictionary: readonly string[];
   hasUnfilteredItems?: boolean;
   hasActiveSearch?: boolean;
+  /** Notifies the parent when the selected tab changes (including auto-switches). */
+  onTabChange?: (tab: QueueTab) => void;
   onToggleComplete: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onAddFollowUp: (itemId: string, text: string) => Promise<void>;
@@ -28,6 +30,7 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
   dictionary,
   hasUnfilteredItems = false,
   hasActiveSearch = false,
+  onTabChange,
   onToggleComplete,
   onDelete,
   onAddFollowUp,
@@ -48,7 +51,9 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
     } catch {
       // ignore
     }
-  }, [selectedTab]);
+
+    onTabChange?.(selectedTab);
+  }, [onTabChange, selectedTab]);
 
   // Separate active and completed items
   const activeItems = useMemo(() => items.filter((item) => !item.isCompleted), [items]);

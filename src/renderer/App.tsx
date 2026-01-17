@@ -35,6 +35,7 @@ const App: React.FC = () => {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'queue' | 'discussed'>('queue');
 
   const { flags: experimentalFlags, setFlag: setExperimentalFlag } = useExperimentalFlags();
 
@@ -150,6 +151,15 @@ const App: React.FC = () => {
     }
   }, [activeView, searchQuery]);
 
+  const handleTabChange = useCallback((tab: 'queue' | 'discussed') => {
+    // THOUGHTS.md: search persists within a tab and clears on tab switch.
+    // In practice: switching Queue/Discussed clears the global search query.
+    if (tab !== activeTab) {
+      setSearchQuery('');
+    }
+    setActiveTab(tab);
+  }, [activeTab]);
+
   // Handle keyboard shortcuts (global from main process + local)
   useKeyboardShortcuts({
     onNewItem: handleNewItemShortcut,
@@ -171,7 +181,19 @@ const App: React.FC = () => {
         .map((fu) => fu.text.toLowerCase())
         .join(' ');
 
-      return followUpText.includes(normalizedQuery);
+      if (followUpText.includes(normalizedQuery)) return true;
+
+      // Include timestamps in search matches (THOUGHTS.md)
+      const timestampText = [
+        item.createdAt?.toISOString(),
+        item.completedAt?.toISOString(),
+        ...item.followUps.map((fu) => fu.createdAt?.toISOString()),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return timestampText.includes(normalizedQuery);
     });
   }, [items, normalizedQuery]);
 
@@ -406,6 +428,7 @@ const App: React.FC = () => {
             dictionary={dictionaryTokens}
             hasUnfilteredItems={items.length > 0}
             hasActiveSearch={hasActiveSearch}
+            onTabChange={handleTabChange}
             onToggleComplete={toggleComplete}
             onDelete={deleteItem}
             onAddFollowUp={addFollowUp}
