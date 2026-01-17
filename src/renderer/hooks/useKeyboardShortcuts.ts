@@ -9,12 +9,14 @@ interface UseKeyboardShortcutsOptions {
   onNewItem?: () => void;
   onFind?: () => void;
   onEscape?: () => void;
+  onUndo?: () => void;
 }
 
 export const useKeyboardShortcuts = ({
   onNewItem,
   onFind,
   onEscape,
+  onUndo,
 }: UseKeyboardShortcutsOptions): void => {
   // Handle global shortcuts from main process (via IPC)
   useEffect(() => {
@@ -43,11 +45,18 @@ export const useKeyboardShortcuts = ({
       return;
     }
 
+    // Ctrl/Cmd + Z: Undo
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      onUndo?.();
+      return;
+    }
+
     // Escape: Clear focus / close modals
     if (e.key === 'Escape') {
       onEscape?.();
     }
-  }, [onNewItem, onFind, onEscape]);
+  }, [onNewItem, onFind, onEscape, onUndo]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);

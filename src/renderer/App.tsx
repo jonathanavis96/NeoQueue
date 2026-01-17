@@ -19,6 +19,8 @@ const App: React.FC = () => {
     addFollowUp,
     exportJson,
     exportMarkdown,
+    canUndo,
+    undo,
   } = useQueueData();
 
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -48,6 +50,12 @@ const App: React.FC = () => {
     searchRef.current?.focus();
   }, []);
 
+  const handleUndo = useCallback(async () => {
+    if (!canUndo) return;
+    triggerPulse('restore');
+    await undo();
+  }, [canUndo, triggerPulse, undo]);
+
   const handleEscape = useCallback(() => {
     // Prefer clearing search first (if active), otherwise no-op.
     if (searchQuery.trim().length > 0) {
@@ -61,6 +69,7 @@ const App: React.FC = () => {
     onNewItem: handleNewItemShortcut,
     onFind: handleFindShortcut,
     onEscape: handleEscape,
+    onUndo: handleUndo,
   });
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -108,6 +117,18 @@ const App: React.FC = () => {
               onClear={() => setSearchQuery('')}
               disabled={isLoading}
             />
+            <button
+              type="button"
+              className="app-help-button"
+              onClick={async () => {
+                await handleUndo();
+              }}
+              aria-label="Undo last action"
+              disabled={!canUndo}
+              title="Undo (Ctrl/Cmd+Z)"
+            >
+              Undo
+            </button>
             <button
               type="button"
               className="app-help-button"
@@ -177,6 +198,7 @@ const App: React.FC = () => {
       
       {/* Keyboard shortcuts hint */}
       <div className="app-shortcuts-hint" aria-hidden="true">
+        <kbd>Ctrl</kbd>+<kbd>Z</kbd> Undo &nbsp;|&nbsp;
         <kbd>Ctrl</kbd>+<kbd>N</kbd> New item &nbsp;|&nbsp;
         <kbd>Ctrl</kbd>+<kbd>F</kbd> Search &nbsp;|&nbsp;
         <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Q</kbd> Toggle window

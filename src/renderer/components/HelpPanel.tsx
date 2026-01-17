@@ -49,6 +49,7 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
       q: 'Q',
       esc: 'Esc',
       enter: 'Enter',
+      z: 'Z',
     };
   }, [isMac]);
 
@@ -113,6 +114,7 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
           <h3 className="help-panel-section-title">Keyboard shortcuts</h3>
           <ul className="help-panel-list">
             <li><kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.n}</kbd> Focus “New item” input</li>
+            <li><kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.z}</kbd> Undo last action</li>
             <li>
               <kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.shift}</kbd>+<kbd>{keyLabel.n}</kbd> Focus “New item” input (global)
             </li>

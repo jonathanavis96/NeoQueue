@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 13:43:11
+Last updated: 2026-01-17 13:47:15
 
 ## Current State
 
@@ -13,13 +13,21 @@ Last updated: 2026-01-17 13:43:11
   - Add item quickly (Enter-to-add)
   - Copy item text (one-click)
   - Follow-ups (expand/collapse + inline add)
-  - Completion workflow (Active vs Discussed)
+  - Completion workflow (Queue vs Discussed tabs)
   - Delete items
+- Search/filter:
+  - Header search box filters item text + follow-up text
+  - Ctrl/Cmd+F focuses search; Esc clears active search
 - Power-user ergonomics:
   - Ctrl/Cmd+N focuses new item input (renderer)
-  - Ctrl/Cmd+F focuses search; Esc clears active search
   - Global shortcuts: Ctrl/Cmd+Shift+N (show + focus new item), Ctrl/Cmd+Shift+Q (toggle window)
   - System tray menu + double-click to show window
+- Matrix polish:
+  - Optional scanline/CRT overlay (default off) persisted in `localStorage`
+  - Brief pulse/glitch animations on key actions (add/copy/complete/restore)
+- Data integrity:
+  - Export JSON + Markdown via Electron save dialog (Help panel buttons)
+  - Best-effort debounced secondary backup to `Documents/NeoQueue Backups/backup-latest.json`
 - Onboarding & docs:
   - In-app, dismissible Help panel (first-run + manual open)
   - README updated with screenshot, shortcuts, tray behavior, packaging notes
@@ -32,7 +40,8 @@ Last updated: 2026-01-17 13:43:11
 - Current app is intentionally **list-first** (faster to ship, already meets practical MVP goals). Future work may reconcile/align THOUGHTS.md with this direction.
 
 **Remaining notable gaps from THOUGHTS.md “data integrity” ideals:**
-- Undo, export, and automatic backups are not implemented (treat as post-v1 unless required).
+- Undo is not implemented yet (export + a best-effort backup are implemented).
+- Import is not implemented (export-only today).
 
 ## Goal
 
@@ -42,48 +51,29 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 ### High Priority (Next Build Iterations)
 
-- [x] **Task 10:** Build & distribution readiness
-  - [x] electron-builder base config present in `package.json` (mac/win/linux targets)
-  - [x] Add real app icons (app + tray) and wire them into Electron + electron-builder config
-  - [x] Validate `npm run package` produces working artifacts on at least one OS (sanity check: app launches, data persists)
-  - [x] Decide on auto-updater: **Defer for v1** (no distribution channel yet; revisit if publishing via GitHub Releases, S3, or an internal updater feed)
-  - Target: Installable artifacts with correct branding/icons
+- [ ] **Task 16:** Data integrity (undo + import)
+  - [x] Optional: **undo** (single-step) for the most recent destructive action (complete/restore/delete/add).
+    - Keep scope tight: single-step, in-memory history only; clear history on restart.
+    - Must be safe with persistence (no corrupt state; graceful if undo fails).
+  - [ ] Optional: **import JSON** (round-trip with export)
+    - Use file picker in main process; validate schema + migrate dates.
+    - Guardrails: show confirmation before overwriting current state.
 
-- [x] **Task 11:** Documentation & onboarding
-  - [x] Create `NEURONS.md` codebase map (now that core features exist)
-  - [x] Expand README:
-    - Add at least one screenshot/GIF
-    - Add troubleshooting (packaging notes, common startup issues, AppImage/libfuse note)
-    - Update shortcut table to include global shortcuts + tray behavior
-  - [x] Add in-app help/onboarding (minimal, dismissible):
-    - First-run or manual “How to use” panel
-    - Include: add item, copy, follow-ups, complete, restore after restart, global shortcuts
-  - Target: A first-time user can install, understand, and use the app in < 2 minutes
+- [ ] **Task 17:** Window behavior polish
+  - [ ] Add a **close-to-tray** option (intercept window close event and hide instead)
+    - Persist setting (likely in `electron-store`)
+  - [ ] Remember window size/position across restarts (`BrowserWindow.getBounds()` → persist → restore)
+  - [ ] Ensure behavior is sane on multi-monitor changes (fallback to centered default)
 
 ### Medium Priority (Feature Alignment / UX)
 
-- [x] **Task 13:** Two-tab UI (Queue / Discussed)
-  - Replace the two-section layout with a tab bar: **Queue** (active) and **Discussed** (completed).
-  - Optional: persist selected tab (localStorage) and restore on startup.
-  - Ensure keyboard flow remains solid (Tab order, shortcuts still work).
+- [ ] **Task 18:** “Right-click copy + follow-up” ergonomics (list-first compatible)
+  - Optional alternative to the canvas spec: add a context-menu/right-click action on an item to copy text and auto-open the follow-up input.
+  - Keep existing one-click copy button.
 
-- [x] **Task 14:** Matrix polish effects (tasteful)
-  - Add a subtle scanline/CRT overlay implemented as a CSS pseudo-element over the app container.
-    - Default: **off**
-    - Persist: `localStorage` (`neoqueue.ui.effects.scanlines`)
-    - Provide an in-app toggle (likely in Help panel or header menu)
-  - Add a brief “glitch/pulse” animation on key actions:
-    - add item
-    - copy item
-    - mark discussed / restore
-  - Prefer CSS-only (transform/opacity/text-shadow) and keep it under ~300ms.
-  - Guardrails: no seizure-y flashing; keep 60fps; no layout thrash.
-
-- [x] **Task 16:** Data integrity “nice-to-have” (post-v1 unless needed)
-  - [x] Export current state as JSON (download/save via Electron main process)
-  - [x] Optional: export Markdown (manager-friendly) with Active + Discussed sections
-  - [x] Optional: debounced backup to a secondary location (Windows-safe pathing)
-  - [ ] Optional: undo (single-step) if it can be implemented safely
+- [ ] **Task 19:** Empty states + lightweight notification text
+  - Add Matrix-flavored empty states for Queue/Discussed.
+  - Optional: show “N items in your Queue” on startup (in-app, not OS-level notifications).
 
 ### Low Priority (Bigger Spec Items / Future)
 
@@ -91,22 +81,30 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - Decide: keep list UI for v1 (recommended) vs implement click-to-create canvas.
   - If keeping list: update THOUGHTS.md to reflect the chosen UX.
 
-- [ ] **Task 17:** Window behavior polish
-  - Add a **close-to-tray** option (intercept window close event and hide instead)
-    - Persist setting (likely in `electron-store` or `localStorage` + IPC)
-  - Remember window size/position across restarts (`BrowserWindow.getBounds()` → persist → restore)
-  - Ensure behavior is sane on multi-monitor changes (fallback to centered default)
+- [ ] **Task 20:** Window controls (always-on-top / pin)
+  - Add an always-on-top toggle (pin button) and persist the preference.
+
+---
+
+### Completed (Log)
+
+- [x] **Task 10:** Build & distribution readiness
+- [x] **Task 11:** Documentation & onboarding
+- [x] **Task 13:** Two-tab UI (Queue / Discussed)
+- [x] **Task 14:** Matrix polish effects (tasteful)
 
 ## Discoveries & Notes
 
 **2026-01-17 (Planning update):**
-- THOUGHTS.md includes several “aspirational” features (canvas, right-click flow, auto-backup/undo/export) that diverge from the current shipped UI. The current app is intentionally *list-first* and already satisfies many practical MVP goals.
-- Current codebase already has small Matrix touches (blinking cursor). **Scanline/CRT overlay** and **glitch/pulse animations** have now been added (Task 14).
+- THOUGHTS.md includes several “aspirational” features (canvas UI, right-click workflow, always-on-top, etc.) that diverge from the shipped **list-first** UI. This is intentional for v1; we should later reconcile THOUGHTS.md to match reality if we commit to list-first.
+- Data integrity status:
+  - Export (JSON + Markdown) exists.
+  - Best-effort debounced backup exists.
+  - Undo + import are the remaining notable gaps.
 - Window behavior today:
   - Global shortcut toggles window visibility (`CommandOrControl+Shift+Q` uses `mainWindow.hide()`)
   - No close-to-tray intercept and no persisted window bounds yet.
-- Two-tab UI is low-risk and aligns well with THOUGHTS.md without committing to the canvas concept.
-- Data-integrity items (backup, undo, export) should be treated as post-v1 unless required; they add complexity and deserve careful design.
+- UX gaps still worth considering for v1 (list-first compatible): context-menu/right-click copy+follow-up, empty states, and a lightweight “pending count” message.
 
 **2026-01-17 (Build Iteration): Task 14 Matrix polish effects**
 - Added CSS scanline/CRT overlay (default off) via `.app.scanlines-enabled` pseudo-elements.
