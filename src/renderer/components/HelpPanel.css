@@ -120,9 +120,28 @@
 
 .help-panel-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--spacing-sm);
   margin-top: var(--spacing-lg);
+}
+
+.help-panel-export-scopes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border: 1px solid rgba(0, 255, 0, 0.18);
+  background: rgba(0, 255, 0, 0.04);
+  border-radius: var(--radius-md);
+  justify-content: flex-end;
+}
+
+.help-panel-export-scopes-title {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--matrix-green-dim);
+  opacity: 0.85;
 }
 
 .help-panel-primary,

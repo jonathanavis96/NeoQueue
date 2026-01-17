@@ -19,6 +19,8 @@ const App: React.FC = () => {
     addFollowUp,
     exportJson,
     exportMarkdown,
+    exportJsonScoped,
+    exportMarkdownScoped,
     importJson,
     canUndo,
     undo,
@@ -244,6 +246,38 @@ const App: React.FC = () => {
           } catch (e) {
             // Keep the help panel open; surface error in app error box.
             // useQueueData already sets error on failure paths.
+            // eslint-disable-next-line no-console
+            console.error(e);
+          }
+        }}
+        onExportActiveJson={async () => {
+          try {
+            await exportJsonScoped('active');
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error(e);
+          }
+        }}
+        onExportDiscussedJson={async () => {
+          try {
+            await exportJsonScoped('discussed');
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error(e);
+          }
+        }}
+        onExportActiveMarkdown={async () => {
+          try {
+            await exportMarkdownScoped('active');
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error(e);
+          }
+        }}
+        onExportDiscussedMarkdown={async () => {
+          try {
+            await exportMarkdownScoped('discussed');
+          } catch (e) {
             // eslint-disable-next-line no-console
             console.error(e);
           }

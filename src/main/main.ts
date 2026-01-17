@@ -290,9 +290,10 @@ ipcMain.handle(IPC_CHANNELS.SET_ALWAYS_ON_TOP, async (_event, enabled: boolean) 
   }
 });
 
-ipcMain.handle(IPC_CHANNELS.EXPORT_JSON, async (_event, data: AppState) => {
+ipcMain.handle(IPC_CHANNELS.EXPORT_JSON, async (_event, data: AppState, options?: { scope?: string }) => {
   try {
-    const defaultFileName = `neoqueue-export-${new Date().toISOString().slice(0, 10)}.json`;
+    const scopeSuffix = options?.scope && options.scope !== 'all' ? `-${options.scope}` : '';
+    const defaultFileName = `neoqueue-export${scopeSuffix}-${new Date().toISOString().slice(0, 10)}.json`;
     const { canceled, filePath } = await dialog.showSaveDialog({
       title: 'Export NeoQueue data',
       defaultPath: defaultFileName,
@@ -380,9 +381,10 @@ const toMarkdown = (data: AppState): string => {
   return lines.join('\n');
 };
 
-ipcMain.handle(IPC_CHANNELS.EXPORT_MARKDOWN, async (_event, data: AppState) => {
+ipcMain.handle(IPC_CHANNELS.EXPORT_MARKDOWN, async (_event, data: AppState, options?: { scope?: string }) => {
   try {
-    const defaultFileName = `neoqueue-export-${new Date().toISOString().slice(0, 10)}.md`;
+    const scopeSuffix = options?.scope && options.scope !== 'all' ? `-${options.scope}` : '';
+    const defaultFileName = `neoqueue-export${scopeSuffix}-${new Date().toISOString().slice(0, 10)}.md`;
     const { canceled, filePath } = await dialog.showSaveDialog({
       title: 'Export NeoQueue data (Markdown)',
       defaultPath: defaultFileName,

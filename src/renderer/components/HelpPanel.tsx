@@ -15,7 +15,11 @@ interface HelpPanelProps {
   onClose: () => void;
   onDismissForever: () => void;
   onExportJson: () => void;
+  onExportActiveJson: () => void;
+  onExportDiscussedJson: () => void;
   onExportMarkdown: () => void;
+  onExportActiveMarkdown: () => void;
+  onExportDiscussedMarkdown: () => void;
   onImportJson: () => void;
   scanlinesEnabled: boolean;
   onToggleScanlines: (enabled: boolean) => void;
@@ -26,7 +30,11 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
   onClose,
   onDismissForever,
   onExportJson,
+  onExportActiveJson,
+  onExportDiscussedJson,
   onExportMarkdown,
+  onExportActiveMarkdown,
+  onExportDiscussedMarkdown,
   onImportJson,
   scanlinesEnabled,
   onToggleScanlines,
@@ -157,6 +165,21 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
             <button type="button" className="help-panel-secondary" onClick={onExportMarkdown}>
               Export notes (Markdown)
             </button>
+            <div className="help-panel-export-scopes" role="group" aria-label="Scoped export options">
+              <div className="help-panel-export-scopes-title">Scoped exports</div>
+              <button type="button" className="help-panel-secondary" onClick={onExportActiveJson}>
+                Export Active (JSON)
+              </button>
+              <button type="button" className="help-panel-secondary" onClick={onExportDiscussedJson}>
+                Export Discussed (JSON)
+              </button>
+              <button type="button" className="help-panel-secondary" onClick={onExportActiveMarkdown}>
+                Export Active (Markdown)
+              </button>
+              <button type="button" className="help-panel-secondary" onClick={onExportDiscussedMarkdown}>
+                Export Discussed (Markdown)
+              </button>
+            </div>
             <button type="button" className="help-panel-secondary" onClick={onImportJson}>
               Import data (JSON)
             </button>

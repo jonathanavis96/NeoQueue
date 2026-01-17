@@ -33,6 +33,17 @@ export interface AppState {
 }
 
 /**
+ * Export scoping options.
+ *
+ * Why: Allows exporting only Active or only Discussed items without changing the core schema.
+ */
+export type ExportScope = 'all' | 'active' | 'discussed';
+
+export interface ExportOptions {
+  scope?: ExportScope;
+}
+
+/**
  * IPC channel names for type-safe communication
  */
 export const IPC_CHANNELS = {

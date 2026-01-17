@@ -3,7 +3,7 @@
 // It's used to safely expose specific functionality to the renderer
 
 import { contextBridge, ipcRenderer } from 'electron';
-import { AppState, IPC_CHANNELS } from '../shared/types';
+import { AppState, ExportOptions, IPC_CHANNELS } from '../shared/types';
 
 // Response types for IPC calls
 interface SaveDataResponse {
@@ -57,11 +57,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getVersion: (): Promise<string> => 
     ipcRenderer.invoke(IPC_CHANNELS.GET_VERSION),
 
-  exportJson: (data: AppState): Promise<ExportJsonResponse> =>
-    ipcRenderer.invoke(IPC_CHANNELS.EXPORT_JSON, data),
+  exportJson: (data: AppState, options?: ExportOptions): Promise<ExportJsonResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.EXPORT_JSON, data, options),
 
-  exportMarkdown: (data: AppState): Promise<ExportMarkdownResponse> =>
-    ipcRenderer.invoke(IPC_CHANNELS.EXPORT_MARKDOWN, data),
+  exportMarkdown: (data: AppState, options?: ExportOptions): Promise<ExportMarkdownResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.EXPORT_MARKDOWN, data, options),
 
   importJson: (): Promise<ImportJsonResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.IMPORT_JSON),
@@ -96,8 +96,8 @@ declare global {
       saveData: (data: AppState) => Promise<SaveDataResponse>;
       loadData: () => Promise<LoadDataResponse>;
       getVersion: () => Promise<string>;
-      exportJson: (data: AppState) => Promise<ExportJsonResponse>;
-      exportMarkdown: (data: AppState) => Promise<ExportMarkdownResponse>;
+      exportJson: (data: AppState, options?: ExportOptions) => Promise<ExportJsonResponse>;
+      exportMarkdown: (data: AppState, options?: ExportOptions) => Promise<ExportMarkdownResponse>;
       importJson: () => Promise<ImportJsonResponse>;
       getAlwaysOnTop: () => Promise<boolean>;
       setAlwaysOnTop: (enabled: boolean) => Promise<{ success: boolean; enabled: boolean; error?: string }>;

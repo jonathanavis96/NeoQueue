@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 14:47:30
+Last updated: 2026-01-17 14:52:00
 
 ## Current State
 
@@ -63,7 +63,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 ### Medium Priority (optional v1 polish)
 
-- [ ] **Task 22:** Export scoping options
+- [x] **Task 22:** Export scoping options
   - Add export variants: Active-only / Discussed-only (date range optional).
   - Keep existing Export JSON/Markdown buttons as “All data”.
 
@@ -94,6 +94,12 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 - [x] **Task 16:** Data integrity (undo + import)
 
 ## Discoveries & Notes
+
+**2026-01-17 (Build Iteration): Task 22 export scoping**
+- Added scoped export variants: Active-only and Discussed-only for both JSON and Markdown.
+- Implemented via new `ExportScope`/`ExportOptions` types, renderer helper functions, and additional Help panel buttons.
+- Main process uses scoped suffixes in default filenames (e.g., `neoqueue-export-active-YYYY-MM-DD.*`).
+
 
 **2026-01-17 (Build Iteration): Task 21 release validation pass**
 - Ran: `npm run type-check`, `npm run lint`, `npm run build`, `npm run package` (Linux/WSL2).

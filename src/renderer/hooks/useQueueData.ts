@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { QueueItem, AppState } from '../../shared/types';
+import { QueueItem, AppState, ExportScope } from '../../shared/types';
 
 type UndoSnapshot = {
   items: QueueItem[];
@@ -25,6 +25,8 @@ interface UseQueueDataResult {
   undo: () => Promise<void>;
   exportJson: () => Promise<void>;
   exportMarkdown: () => Promise<void>;
+  exportJsonScoped: (scope: ExportScope) => Promise<void>;
+  exportMarkdownScoped: (scope: ExportScope) => Promise<void>;
   importJson: () => Promise<void>;
 }
 
@@ -216,9 +218,20 @@ export const useQueueData = (): UseQueueDataResult => {
     }
   }, [items, saveData]);
 
-  const exportJson = useCallback(async () => {
+  const buildScopedAppState = useCallback((scope: ExportScope): AppState => {
+    const scopeItems =
+      scope === 'active'
+        ? items.filter((i) => !i.isCompleted)
+        : scope === 'discussed'
+          ? items.filter((i) => i.isCompleted)
+          : items;
+
+    return buildAppState(scopeItems);
+  }, [buildAppState, items]);
+
+  const exportJsonScoped = useCallback(async (scope: ExportScope) => {
     try {
-      const response = await window.electronAPI.exportJson(buildAppState(items));
+      const response = await window.electronAPI.exportJson(buildScopedAppState(scope), { scope });
       if (!response.success) {
         throw new Error(response.error || 'Failed to export JSON');
       }
@@ -226,7 +239,11 @@ export const useQueueData = (): UseQueueDataResult => {
       setError(String(err));
       throw err;
     }
-  }, [buildAppState, items]);
+  }, [buildScopedAppState]);
+
+  const exportJson = useCallback(async () => {
+    return exportJsonScoped('all');
+  }, [exportJsonScoped]);
 
   const canUndo = undoSnapshot !== null;
 
@@ -248,9 +265,9 @@ export const useQueueData = (): UseQueueDataResult => {
     }
   }, [items, saveData, undoSnapshot]);
 
-  const exportMarkdown = useCallback(async () => {
+  const exportMarkdownScoped = useCallback(async (scope: ExportScope) => {
     try {
-      const response = await window.electronAPI.exportMarkdown(buildAppState(items));
+      const response = await window.electronAPI.exportMarkdown(buildScopedAppState(scope), { scope });
       if (!response.success) {
         throw new Error(response.error || 'Failed to export Markdown');
       }
@@ -258,7 +275,11 @@ export const useQueueData = (): UseQueueDataResult => {
       setError(String(err));
       throw err;
     }
-  }, [buildAppState, items]);
+  }, [buildScopedAppState]);
+
+  const exportMarkdown = useCallback(async () => {
+    return exportMarkdownScoped('all');
+  }, [exportMarkdownScoped]);
 
   const importJson = useCallback(async () => {
     try {
@@ -301,6 +322,8 @@ export const useQueueData = (): UseQueueDataResult => {
     undo,
     exportJson,
     exportMarkdown,
+    exportJsonScoped,
+    exportMarkdownScoped,
     importJson,
   };
 };
