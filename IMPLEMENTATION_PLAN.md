@@ -1,14 +1,16 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 13:51:01
+Last updated: 2026-01-17 14:03:03
 
 ## Current State
 
-**App status:** Phase 3 (Polish) in progress. Core “list-first” workflow is implemented and usable; remaining work is primarily UX polish and optional feature alignment with the original (more ambitious) THOUGHTS.md canvas concept.
+**App status:** Core v1 is implemented and usable; remaining work is primarily **window behavior polish** + optional UX alignment with the more ambitious THOUGHTS.md canvas concept.
 
-**What exists today (verified):**
+**What exists today (verified in codebase):**
 - Electron main process + Vite/React renderer wired and working.
-- Persistence via `electron-store` (IPC save/load + renderer hook with optimistic updates/rollback).
+- Persistence via `electron-store`:
+  - IPC save/load (`IPC_CHANNELS.SAVE_DATA`, `IPC_CHANNELS.LOAD_DATA`)
+  - Renderer hook (`useQueueData`) with optimistic updates + rollback on save failure
 - Core queue workflow:
   - Add item quickly (Enter-to-add)
   - Copy item text (one-click)
@@ -20,6 +22,7 @@ Last updated: 2026-01-17 13:51:01
   - Ctrl/Cmd+F focuses search; Esc clears active search
 - Power-user ergonomics:
   - Ctrl/Cmd+N focuses new item input (renderer)
+  - Ctrl/Cmd+Z triggers single-step Undo (renderer)
   - Global shortcuts: Ctrl/Cmd+Shift+N (show + focus new item), Ctrl/Cmd+Shift+Q (toggle window)
   - System tray menu + double-click to show window
 - Matrix polish:
@@ -27,6 +30,7 @@ Last updated: 2026-01-17 13:51:01
   - Brief pulse/glitch animations on key actions (add/copy/complete/restore)
 - Data integrity:
   - Export JSON + Markdown via Electron save dialog (Help panel buttons)
+  - Import JSON via Electron open dialog + overwrite confirmation
   - Best-effort debounced secondary backup to `Documents/NeoQueue Backups/backup-latest.json`
 - Onboarding & docs:
   - In-app, dismissible Help panel (first-run + manual open)
@@ -37,35 +41,27 @@ Last updated: 2026-01-17 13:51:01
 
 **Known spec divergence (intentional for v1):**
 - THOUGHTS.md describes a **canvas / click-to-create** UI and **right-click copy + follow-up** flow.
-- Current app is intentionally **list-first** (faster to ship, already meets practical MVP goals). Future work may reconcile/align THOUGHTS.md with this direction.
+- Current app is intentionally **list-first** (faster to ship, already meets practical MVP goals).
 
-**Remaining notable gaps from THOUGHTS.md “data integrity” ideals:**
-- Undo is not implemented yet (export + a best-effort backup are implemented).
-- Import is not implemented (export-only today).
+**Remaining notable gaps (as of this plan update):**
+- Window bounds persistence (size/position) across restarts is not implemented.
+- No multi-monitor sanity checks/fallback yet (e.g., display change makes saved bounds off-screen).
 
 ## Goal
 
-Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, follow-ups, completion, persistence, keyboard/tray workflow) and is ready to package/install with correct branding. Secondary goal: selectively align THOUGHTS.md “nice-to-have” features (search/filter, onboarding, subtle Matrix effects) without destabilizing core flows.
+Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, follow-ups, completion, persistence, keyboard/tray workflow) and is ready to package/install with correct branding. Secondary goal: selectively align THOUGHTS.md “nice-to-have” features without destabilizing core flows.
 
 ## Prioritized Tasks
 
-### High Priority (Next Build Iterations)
-
-- [x] **Task 16:** Data integrity (undo + import)
-  - [x] Optional: **undo** (single-step) for the most recent destructive action (complete/restore/delete/add).
-    - Keep scope tight: single-step, in-memory history only; clear history on restart.
-    - Must be safe with persistence (no corrupt state; graceful if undo fails).
-  - [x] Optional: **import JSON** (round-trip with export)
-    - Uses file picker in main process; validates schema and migrates dates.
-    - Guardrails: shows confirmation before overwriting current state.
+### High Priority
 
 - [ ] **Task 17:** Window behavior polish
   - [x] Add a **close-to-tray** option (intercept window close event and hide instead)
     - Persist setting (implemented via `electron-store`, toggled via tray menu)
-  - [ ] Remember window size/position across restarts (`BrowserWindow.getBounds()` → persist → restore)
+  - [x] Remember window size/position across restarts (`BrowserWindow.getBounds()` → persist → restore)
   - [ ] Ensure behavior is sane on multi-monitor changes (fallback to centered default)
 
-### Medium Priority (Feature Alignment / UX)
+### Medium Priority
 
 - [ ] **Task 18:** “Right-click copy + follow-up” ergonomics (list-first compatible)
   - Optional alternative to the canvas spec: add a context-menu/right-click action on an item to copy text and auto-open the follow-up input.
@@ -75,7 +71,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - Add Matrix-flavored empty states for Queue/Discussed.
   - Optional: show “N items in your Queue” on startup (in-app, not OS-level notifications).
 
-### Low Priority (Bigger Spec Items / Future)
+### Low Priority
 
 - [ ] **Task 15:** Reconcile THOUGHTS.md “canvas” concept vs current list UI
   - Decide: keep list UI for v1 (recommended) vs implement click-to-create canvas.
@@ -92,19 +88,16 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 - [x] **Task 11:** Documentation & onboarding
 - [x] **Task 13:** Two-tab UI (Queue / Discussed)
 - [x] **Task 14:** Matrix polish effects (tasteful)
+- [x] **Task 16:** Data integrity (undo + import)
 
 ## Discoveries & Notes
 
 **2026-01-17 (Planning update):**
-- THOUGHTS.md includes several “aspirational” features (canvas UI, right-click workflow, always-on-top, etc.) that diverge from the shipped **list-first** UI. This is intentional for v1; we should later reconcile THOUGHTS.md to match reality if we commit to list-first.
-- Data integrity status:
-  - Export (JSON + Markdown) exists.
-  - Best-effort debounced backup exists.
-  - Undo + import are the remaining notable gaps.
-- Window behavior today:
-  - Global shortcut toggles window visibility (`CommandOrControl+Shift+Q` uses `mainWindow.hide()`)
-  - No close-to-tray intercept and no persisted window bounds yet.
-- UX gaps still worth considering for v1 (list-first compatible): context-menu/right-click copy+follow-up, empty states, and a lightweight “pending count” message.
+- THOUGHTS.md “Success Metrics” emphasize right-click copy+follow-up and a canvas UI; v1 intentionally ships a **list-first** UX. Task 18 is the lowest-risk way to approximate the right-click ergonomics without a full canvas rewrite.
+- Window code (`src/main/main.ts`) currently:
+  - Creates the window with fixed defaults (800x600) and no bounds persistence.
+  - Implements close-to-tray by intercepting `BrowserWindow#close` when a tray exists and the setting is enabled.
+  - Does not use `screen` APIs yet, so multi-monitor edge cases are not handled.
 
 **2026-01-17 (Build Iteration): Task 14 Matrix polish effects**
 - Added CSS scanline/CRT overlay (default off) via `.app.scanlines-enabled` pseudo-elements.
@@ -125,6 +118,11 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 - Intercepts window close to hide to tray when enabled (and a tray exists).
 - Added tray context menu checkbox to toggle close-to-tray.
 - Ensures real quit still works by setting an `isQuitting` guard via `app.on('before-quit')`.
+
+**2026-01-17 (Build Iteration): Task 17 window bounds persistence**
+- Persisted window bounds (`windowState.bounds`) + maximize state (`windowState.isMaximized`) to `electron-store`.
+- Restores size/position on startup and re-maximizes if needed.
+- Debounces saves during move/resize/maximize/unmaximize to avoid excessive disk writes.
 
 **2026-01-17 (Build Iteration): Task 16 export Markdown**
 - Added Markdown export via Electron save dialog and IPC (`export-markdown`).

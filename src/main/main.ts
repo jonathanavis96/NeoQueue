@@ -53,9 +53,21 @@ type AppSettings = {
   closeToTray: boolean;
 };
 
+type WindowState = {
+  /**
+   * Window bounds in "normal" (non-maximized) state.
+   *
+   * Why: Persisting the normal bounds allows a maximized window to restore to the
+   * user's last preferred size/position when un-maximized.
+   */
+  bounds: Electron.Rectangle;
+  isMaximized: boolean;
+};
+
 type StoreSchema = {
   appState: AppState;
   settings: AppSettings;
+  windowState?: WindowState;
 };
 
 // Initialize electron-store for persistent data storage
@@ -71,6 +83,34 @@ const store = new Store<StoreSchema>({
     },
   },
 });
+
+const getSavedWindowState = (): WindowState | null => {
+  const saved = store.get('windowState');
+  if (!saved) return null;
+
+  // Best-effort validation (defensive against corrupted store files).
+  const bounds = (saved as WindowState).bounds;
+  const isMaximized = Boolean((saved as WindowState).isMaximized);
+
+  if (!bounds || typeof bounds !== 'object') return null;
+
+  const { x, y, width, height } = bounds as Electron.Rectangle;
+  if (![x, y, width, height].every((n) => typeof n === 'number' && Number.isFinite(n))) return null;
+  if (width < 200 || height < 150) return null;
+
+  return { bounds: { x, y, width, height }, isMaximized };
+};
+
+const saveWindowState = (win: BrowserWindow): void => {
+  // When maximized, getBounds() returns the maximized bounds, not the previous "normal" bounds.
+  // Use getNormalBounds() to persist the meaningful restore target.
+  const bounds = win.isMaximized() ? win.getNormalBounds() : win.getBounds();
+
+  store.set('windowState', {
+    bounds,
+    isMaximized: win.isMaximized(),
+  });
+};
 
 const getCloseToTraySetting = (): boolean => {
   return Boolean(store.get('settings')?.closeToTray);
@@ -398,13 +438,27 @@ ipcMain.handle(IPC_CHANNELS.IMPORT_JSON, async () => {
   }
 });
 
+let pendingWindowStateSaveTimer: NodeJS.Timeout | null = null;
+
+const scheduleWindowStateSave = (win: BrowserWindow, debounceMs = 250): void => {
+  if (pendingWindowStateSaveTimer) clearTimeout(pendingWindowStateSaveTimer);
+  pendingWindowStateSaveTimer = setTimeout(() => {
+    pendingWindowStateSaveTimer = null;
+    saveWindowState(win);
+  }, debounceMs);
+};
+
 const createWindow = (): void => {
   // Create the browser window.
   const appIcon = getAppIcon();
 
+  const savedWindowState = getSavedWindowState();
+
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: savedWindowState?.bounds.width ?? 800,
+    height: savedWindowState?.bounds.height ?? 600,
+    x: savedWindowState?.bounds.x,
+    y: savedWindowState?.bounds.y,
     minWidth: 400,
     minHeight: 300,
     backgroundColor: '#0a0a0a',
@@ -424,6 +478,9 @@ const createWindow = (): void => {
   // Close-to-tray: intercept the close button and hide the window instead.
   // Note: we only do this when a tray exists; otherwise the user could "lose" the app.
   mainWindow.on('close', (e) => {
+    // Persist bounds on any close path (quit OR hide-to-tray).
+    saveWindowState(mainWindow!);
+
     if (isQuitting) return;
     if (!tray) return;
     if (!getCloseToTraySetting()) return;
@@ -445,8 +502,19 @@ const createWindow = (): void => {
 
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
+    if (savedWindowState?.isMaximized) {
+      mainWindow?.maximize();
+    }
+
     mainWindow?.show();
   });
+
+  // Persist bounds on move/resize/maximize/unmaximize.
+  // Debounced to avoid excessive writes while the user is dragging the window.
+  mainWindow.on('resize', () => scheduleWindowStateSave(mainWindow!));
+  mainWindow.on('move', () => scheduleWindowStateSave(mainWindow!));
+  mainWindow.on('maximize', () => scheduleWindowStateSave(mainWindow!));
+  mainWindow.on('unmaximize', () => scheduleWindowStateSave(mainWindow!));
 
   mainWindow.on('closed', () => {
     mainWindow = null;
