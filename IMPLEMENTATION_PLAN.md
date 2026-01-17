@@ -1,113 +1,93 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 12:41:46
+Last updated: 2026-01-17 12:59:30
 
 ## Current State
 
-**Current State:** Phase 1 Foundation COMPLETE. Phase 2 Core Features COMPLETE. Ready for Phase 3 Polish.
+**App status:** Phase 1 (Foundation) ✅ complete. Phase 2 (Core list-based workflow) ✅ complete. Entering Phase 3 (Polish, feature alignment with THOUGHTS.md, and distribution readiness).
 
-**Purpose:** Matrix-inspired desktop app for tracking discussion points to raise with manager
+**What exists today (verified):**
+- Electron main process + Vite/React renderer wired and working.
+- Persistent local storage via `electron-store` (save/load IPC + renderer hook with optimistic updates).
+- Queue workflow:
+  - Add item quickly (Enter-to-add)
+  - One-click copy to clipboard
+  - Follow-ups (expand/collapse + inline add)
+  - Completion workflow (Active vs Discussed sections)
+- Power-user ergonomics:
+  - Ctrl+N (renderer) focus input
+  - Ctrl+Shift+N (global) focus input
+  - Ctrl+Shift+Q (global) toggle window
+  - System tray menu + double-click to show window
 
-**Project Type:** Electron desktop app with React frontend
-
-**Phase:** Phase 3 - Polish & Distribution
+**Not yet implemented (from THOUGHTS.md / DoD):**
+- Real distribution assets (app icon + tray icon files wired to electron-builder).
+- NEURONS.md codebase map.
+- Onboarding/help and richer README (screenshot/GIF).
+- “Matrix polish” effects (scanlines/glitch/digital rain) and richer empty states.
+- Spec divergence: THOUGHTS.md describes a canvas + click-to-create / right-click copy+follow-up flow, plus two-tab UI and search/filter. Current app is list-first and does not implement canvas or search.
 
 ## Goal
 
-Build a complete Matrix-inspired desktop app (NeoQueue) for tracking discussion points to raise with manager. Core features:
-1. **Friction-free capture** - Quick entry of discussion items with one-click copy to clipboard ✅
-2. **Follow-up threading** - Add follow-up notes/comments to existing items ✅
-3. **Completion workflow** - Mark items as discussed, archive completed items ✅
-
-The Matrix theme means: dark green/black color scheme, "digital rain" aesthetic, terminal-like fonts.
+Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, follow-ups, completion, persistence, keyboard/tray workflow) and is ready to package/install with correct branding. Secondary goal: selectively align THOUGHTS.md “nice-to-have” features (search/filter, onboarding, subtle Matrix effects) without destabilizing core flows.
 
 ## Prioritized Tasks
 
-### High Priority - Phase 1: Project Setup & Foundation ✅ COMPLETE
+### High Priority (Next Build Iterations)
 
-- [x] **Task 1:** Create project documentation files ✅
-  - Create THOUGHTS.md with project vision and success criteria
-  - Create AGENTS.md with operational guidance
-  - Create basic README.md
-  - Target: All documentation files exist and define the project clearly
+- [ ] **Task 10:** Build & distribution readiness
+  - [x] electron-builder base config present in `package.json` (mac/win/linux targets)
+  - [x] Add real app icons (app + tray) and wire them into Electron + electron-builder config
+  - [x] Validate `npm run package` produces working artifacts on at least one OS (sanity check: app launches, data persists)
+  - [ ] Decide on auto-updater (optional; depends on having a distribution channel)
+  - Target: Installable artifacts with correct branding/icons
 
-- [x] **Task 2:** Initialize Electron + React project structure ✅
-  - Set up package.json with Electron, React, TypeScript dependencies
-  - Configure TypeScript with tsconfig.json
-  - Set up Vite as bundler for React
-  - Create directory structure: src/main/, src/renderer/, src/shared/
-  - Target: `npm install` succeeds, basic Electron app launches
+- [ ] **Task 11:** Documentation & onboarding
+  - [ ] Create `NEURONS.md` codebase map (now that core features exist)
+  - [ ] Expand README with at least one screenshot/GIF + troubleshooting notes
+  - [ ] Add in-app help/onboarding (minimal: dismissible “how to use” panel)
+  - Target: A first-time user can install, understand, and use the app in < 2 minutes
 
-- [x] **Task 3:** Configure development environment ✅
-  - Set up Electron main process entry point (src/main/main.ts)
-  - Configure Vite dev server for React renderer (vite.config.ts)
-  - Set up preload script (src/main/preload.ts)
-  - Add electron-builder for packaging (package.json)
-  - Target: `npm run dev` launches Electron with React window
+### Medium Priority (Feature Alignment / UX)
 
-- [x] **Task 4:** Implement Matrix theme and core layout ✅
-  - Create Matrix-inspired CSS theme (src/renderer/styles/index.css)
-  - CSS variables defined: --matrix-black, --matrix-green, --matrix-green-dim, etc.
-  - Monospace font configured (Fira Code, Consolas)
-  - Basic App component with header (src/renderer/App.tsx)
-  - Target: App displays with Matrix aesthetic
+- [ ] **Task 12:** Add search/filter for items
+  - Add a search box (at least for Active; ideally both Active/Discussed)
+  - Real-time filter by item text + follow-up text
+  - Keep keyboard flow solid (Ctrl+F focuses search, Esc clears)
 
-- [x] **Task 5:** Implement data persistence layer ✅
-  - electron-store integrated in main.ts with IPC handlers (SAVE_DATA, LOAD_DATA, GET_VERSION)
-  - API exposed via preload.ts (saveData, loadData, getVersion)
-  - useQueueData hook in src/renderer/hooks/useQueueData.ts with:
-    - addItem, updateItem, deleteItem, toggleComplete, addFollowUp
-    - Automatic load on mount, optimistic updates with rollback
-  - Target: ✅ Can save and load queue items persistently
+- [ ] **Task 13:** Two-tab UI (Queue / Completed)
+  - Currently items are displayed as two sections in one scroll.
+  - Add a tab bar and persist selected tab (optional).
 
-### Medium Priority - Phase 2: Core Features (UI Components) ✅ COMPLETE
+- [ ] **Task 14:** Matrix polish effects (tasteful)
+  - Add subtle scanline/CRT overlay (toggleable; default off)
+  - Add short glitch animation on: copy, add item, complete
+  - Avoid distraction; keep 60fps.
 
-- [x] **Task 6:** Implement friction-free item capture and list display ✅
-  - ✅ QuickCapture component with Enter-to-add (src/renderer/components/QuickCapture.tsx)
-  - ✅ QueueItemList displays items with Active/Discussed sections
-  - ✅ QueueItemCard with one-click copy to clipboard
-  - ✅ App.tsx wires components to useQueueData hook
-  - Target: ✅ Can add items quickly and copy them to clipboard
+### Low Priority (Bigger Spec Items / Future)
 
-- [x] **Task 7:** Implement follow-up threading ✅
-  - ✅ Expandable section in QueueItemCard with isExpanded state
-  - ✅ addFollowUp wired from useQueueData through QueueItemList to QueueItemCard
-  - ✅ Follow-ups displayed with relative timestamps via formatRelativeTime
-  - ✅ Inline input for adding new follow-ups with Enter-to-submit
-  - ✅ "[+ follow-up]" button shown for items without follow-ups
-  - ✅ "N follow-ups ▶/▼" button for items with existing follow-ups
-  - Target: ✅ Can add and view follow-up comments on any item
+- [ ] **Task 15:** Reconcile THOUGHTS.md “canvas” concept vs current list UI
+  - Decide: keep list UI for v1 (recommended) vs implement click-to-create canvas.
+  - If keeping list: update THOUGHTS.md to reflect the chosen UX.
 
-- [x] **Task 8:** Implement completion workflow ✅
-  - ✅ Toggle complete checkbox ([ ] / [x]) per item
-  - ✅ Active and Discussed sections displayed separately in QueueItemList
-  - ✅ Restore functionality (clicking [x] uncompletes item)
-  - ✅ Visual distinction (strikethrough, dimmed) for completed items
-  - Target: ✅ Full lifecycle: create → discuss → complete → restore
+- [ ] **Task 16:** Export/backup
+  - Export JSON/Markdown.
+  - Optional debounced backup to a secondary location (ensure Windows-safe pathing).
 
-### Low Priority - Phase 3: Polish & Distribution
-
-- [x] **Task 9:** Add keyboard shortcuts and accessibility ✅
-  - ✅ Global keyboard shortcuts: Ctrl+N (focus input), Ctrl+Shift+N (global), Ctrl+Shift+Q (toggle window)
-  - ✅ System tray icon with context menu (Show, New Item, Quit)
-  - ✅ ARIA labels on all interactive elements (QuickCapture, QueueItemCard buttons)
-  - ✅ Keyboard shortcuts hint displayed in UI footer
-  - ✅ useKeyboardShortcuts hook for managing shortcuts in renderer
-  - Target: ✅ Power users can use app without mouse
-
-- [ ] **Task 10:** Set up build and distribution
-  - Configure electron-builder for Windows/Mac/Linux
-  - Create app icons in Matrix theme
-  - Set up auto-updater configuration
-  - Target: Can build distributable installers
-
-- [ ] **Task 11:** Complete documentation and polish
-  - Write comprehensive README with screenshots
-  - Add in-app help/onboarding
-  - Create NEURONS.md mapping the codebase
-  - Target: New users can understand and use the app
+- [ ] **Task 17:** Window behavior polish
+  - Close-to-tray option
+  - Remember window size/position
 
 ## Discoveries & Notes
+
+**2026-01-17 (Planning):**
+- THOUGHTS.md contains several “aspirational” features (canvas, right-click follow-up, digital rain, export, backup) that are not currently implemented.
+- Core list-based workflow is already strong; recommend focusing on packaging + docs first to ship a usable v1.
+
+**2026-01-17 12:59 (Build Iteration):** Task 10 packaging validation complete:
+- Fixed electron-builder entry mismatch by compiling main process during build (`build` now runs `build:electron`) and pointing `package.json#main` at the actual output `dist/main/main/main.js`.
+- Packaging now produces a Linux AppImage (`release/NeoQueue-1.0.0.AppImage`) and `release/linux-unpacked`.
+- Note: In WSL, running AppImage may fail due to missing `libfuse.so.2`; verified via `--appimage-extract` that `resources/app.asar` is present and contains the expected main entry.
 
 **2026-01-17 12:44 (Build Iteration):** Task 9 complete - Keyboard shortcuts and accessibility:
 - Added global shortcuts via Electron's globalShortcut API (Ctrl+Shift+N, Ctrl+Shift+Q)
@@ -119,42 +99,6 @@ The Matrix theme means: dark green/black color scheme, "digital rain" aesthetic,
 - Added visually-hidden class for screen reader hints
 - Fixed tsconfig.json references issue (removed composite project reference)
 - Created src/renderer/types/electron.d.ts for Window.electronAPI types
-
-**2026-01-17 12:41 (Planning Iteration 4):** MAJOR DISCOVERY - Task 7 is ALREADY COMPLETE!
-- Previous analysis was incorrect - the follow-up UI IS fully implemented in QueueItemCard.tsx
-- QueueItemCard has:
-  - `isExpanded` state for toggling visibility
-  - `followUpText` state and `followUpInputRef` for input handling
-  - `handleFollowUpSubmit` wired to `onAddFollowUp` prop
-  - Full expandable section (lines 162-202) with:
-    - Follow-up list with tree-like "└─" prefixes
-    - Relative timestamps using `formatRelativeTime`
-    - Inline input with Enter-to-submit and Escape-to-cancel
-  - "[+ follow-up]" button for items without follow-ups
-  - "N follow-ups ▶/▼" toggle button for items with follow-ups
-- All wiring is complete: App.tsx → QueueItemList → QueueItemCard → useQueueData.addFollowUp
-- Phase 2 Core Features is now 100% COMPLETE
-
-**2026-01-17 12:09 (Planning Iteration 3):** Deep codebase analysis reveals:
-- Task 6 is COMPLETE: QuickCapture, QueueItemList, QueueItemCard all exist and work
-- Task 8 is COMPLETE: Completion workflow fully implemented with toggle, sections, visual distinction
-- (NOTE: Task 7 analysis was incomplete - see above correction)
-
-**2026-01-17 11:49 (Planning Iteration 2):** Deep analysis reveals Task 5 is ALREADY COMPLETE:
-- main.ts: electron-store fully integrated with IPC handlers for SAVE_DATA, LOAD_DATA, GET_VERSION
-- preload.ts: contextBridge exposes electronAPI with saveData(), loadData(), getVersion()
-- useQueueData.ts: Complete hook with all CRUD operations (addItem, updateItem, deleteItem, toggleComplete, addFollowUp)
-- Hook includes: loading state, error handling, optimistic updates with rollback, date serialization
-- generateId() utility included (UUID v4-like)
-
-**2026-01-17 (Planning Iteration 1):** Gap analysis complete. Key findings:
-- Phase 1 Foundation is COMPLETE: All project structure, configs, main/renderer setup, and Matrix theme CSS exist
-- Data types already defined in src/shared/types.ts (QueueItem, FollowUp, AppState, IPC_CHANNELS)
-
-**2026-01-17:** Initial planning complete. Key decisions:
-- Using Electron + React + TypeScript + Vite stack
-- Local-only data storage (no cloud sync for v1)
-- Matrix theme is aesthetic priority
 
 ---
 
