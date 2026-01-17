@@ -10,6 +10,13 @@ mkdir -p "$LOGDIR"
 INTERRUPT_COUNT=0
 INTERRUPT_RECEIVED=false
 
+# Cleanup function for temp files
+cleanup() {
+  if [[ -n "${TEMP_CONFIG:-}" && -f "${TEMP_CONFIG:-}" ]]; then
+    rm -f "$TEMP_CONFIG"
+  fi
+}
+
 handle_interrupt() {
   INTERRUPT_COUNT=$((INTERRUPT_COUNT + 1))
   
@@ -26,25 +33,35 @@ handle_interrupt() {
     echo "========================================"
     echo "🛑 Force exit!"
     echo "========================================"
+    cleanup
     kill 0
     exit 130
   fi
 }
 
 trap 'handle_interrupt' INT TERM
+trap 'cleanup' EXIT
 
 usage() {
   cat <<'EOF'
 Usage:
   loop.sh [--prompt <path>] [--iterations N] [--plan-every N] [--yolo|--no-yolo]
+          [--model <model>]
 
 Defaults:
   --iterations 1
   --plan-every 3
+  --model       Uses default from ~/.rovodev/config.yml
   If --prompt is NOT provided, loop alternates:
     - PLAN on iteration 1 and every N iterations
     - BUILD otherwise
   If --prompt IS provided, that prompt is used for all iterations.
+
+Model Selection:
+  --model <model>  Specify the model to use. Shortcuts available:
+                   opus    -> anthropic.claude-opus-4-5-20251101-v1:0
+                   sonnet  -> anthropic.claude-sonnet-4-20250514-v1:0
+                   Or provide a full model ID directly.
 
 Examples:
   # Run BUILD once (from anywhere)
@@ -55,6 +72,12 @@ Examples:
 
   # Alternate plan/build for 10 iters, plan every 3
   bash ralph/loop.sh --iterations 10 --plan-every 3
+  
+  # Use Sonnet model for faster iterations
+  bash ralph/loop.sh --model sonnet --iterations 20 --plan-every 5
+  
+  # Use Opus for careful planning
+  bash ralph/loop.sh --model opus --iterations 1
 EOF
 }
 
@@ -63,6 +86,7 @@ ITERATIONS=1
 PLAN_EVERY=3
 YOLO_FLAG="--yolo"
 PROMPT_ARG=""
+MODEL_ARG=""
 
 # Parse args
 while [[ $# -gt 0 ]]; do
@@ -77,6 +101,8 @@ while [[ $# -gt 0 ]]; do
       YOLO_FLAG="--yolo"; shift ;;
     --no-yolo)
       YOLO_FLAG=""; shift ;;
+    --model)
+      MODEL_ARG="${2:-}"; shift 2 ;;
     -h|--help)
       usage; exit 0 ;;
     *)
@@ -84,6 +110,42 @@ while [[ $# -gt 0 ]]; do
       usage; exit 2 ;;
   esac
 done
+
+# Resolve model shortcut to full model ID
+resolve_model() {
+  local model="$1"
+  case "$model" in
+    opus)
+      echo "anthropic.claude-opus-4-5-20251101-v1:0" ;;
+    sonnet)
+      echo "anthropic.claude-sonnet-4-20250514-v1:0" ;;
+    *)
+      echo "$model" ;;
+  esac
+}
+
+# Setup model config if specified
+CONFIG_FLAG=""
+TEMP_CONFIG=""
+if [[ -n "$MODEL_ARG" ]]; then
+  RESOLVED_MODEL="$(resolve_model "$MODEL_ARG")"
+  TEMP_CONFIG="/tmp/rovodev_config_$$_$(date +%s).yml"
+  
+  # Copy base config and override modelId
+  if [[ -f "$HOME/.rovodev/config.yml" ]]; then
+    # Use sed to replace modelId in a copy of the config
+    sed "s|^  modelId:.*|  modelId: $RESOLVED_MODEL|" "$HOME/.rovodev/config.yml" > "$TEMP_CONFIG"
+  else
+    # Create minimal config with just the model
+    cat > "$TEMP_CONFIG" <<EOF
+version: 1
+agent:
+  modelId: $RESOLVED_MODEL
+EOF
+  fi
+  CONFIG_FLAG="--config-file $TEMP_CONFIG"
+  echo "Using model: $RESOLVED_MODEL"
+fi
 
 # Resolve a prompt path robustly (works from repo root or ralph/)
 resolve_prompt() {
@@ -139,7 +201,7 @@ run_once() {
   } > "$prompt_with_mode"
 
   # Feed prompt into RovoDev
-  script -q -c "cat \"$prompt_with_mode\" | acli rovodev run ${YOLO_FLAG}" "$log"
+  script -q -c "cat \"$prompt_with_mode\" | acli rovodev run ${CONFIG_FLAG} ${YOLO_FLAG}" "$log"
 
   # Clean up temporary prompt
   rm -f "$prompt_with_mode"

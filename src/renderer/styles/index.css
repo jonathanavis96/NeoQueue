@@ -1,0 +1,91 @@
+/* Global styles and CSS reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Matrix theme colors */
+  --matrix-black: #0a0a0a;
+  --matrix-dark: #0d0d0d;
+  --matrix-green: #00ff00;
+  --matrix-green-dim: #00cc00;
+  --matrix-green-dark: #003300;
+  --matrix-green-glow: rgba(0, 255, 0, 0.3);
+  
+  /* Typography */
+  --font-mono: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* Border radius */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--matrix-green);
+  background-color: var(--matrix-black);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--matrix-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--matrix-green-dark);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--matrix-green-dim);
+}
+
+/* Selection styling */
+::selection {
+  background: var(--matrix-green);
+  color: var(--matrix-black);
+}
+
+/* Focus styling */
+:focus {
+  outline: 1px solid var(--matrix-green);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 1px solid var(--matrix-green);
+  outline-offset: 2px;
+}

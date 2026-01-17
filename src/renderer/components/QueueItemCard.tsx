@@ -1,0 +1,206 @@
+/**
+ * QueueItemCard - Individual item display with copy-to-clipboard functionality
+ * and expandable follow-up threading
+ */
+
+import React, { useState, useCallback, useRef } from 'react';
+import { QueueItem } from '../../shared/types';
+import './QueueItemCard.css';
+
+interface QueueItemCardProps {
+  item: QueueItem;
+  onToggleComplete: (id: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onAddFollowUp: (itemId: string, text: string) => Promise<void>;
+}
+
+// Format relative time (e.g., "2 hours ago")
+const formatRelativeTime = (date: Date): string => {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSecs < 60) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return date.toLocaleDateString();
+};
+
+export const QueueItemCard: React.FC<QueueItemCardProps> = ({
+  item,
+  onToggleComplete,
+  onDelete,
+  onAddFollowUp,
+}) => {
+  const [isCopied, setIsCopied] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [followUpText, setFollowUpText] = useState('');
+  const [isAddingFollowUp, setIsAddingFollowUp] = useState(false);
+  const followUpInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(item.text);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 1500);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  }, [item.text]);
+
+  const handleToggleComplete = useCallback(async () => {
+    await onToggleComplete(item.id);
+  }, [item.id, onToggleComplete]);
+
+  const handleDelete = useCallback(async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await onDelete(item.id);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [item.id, onDelete, isDeleting]);
+
+  const handleToggleExpand = useCallback(() => {
+    setIsExpanded((prev) => !prev);
+  }, []);
+
+  const handleFollowUpSubmit = useCallback(async () => {
+    const trimmedText = followUpText.trim();
+    if (!trimmedText || isAddingFollowUp) return;
+
+    setIsAddingFollowUp(true);
+    try {
+      await onAddFollowUp(item.id, trimmedText);
+      setFollowUpText('');
+      // Focus back on input for quick consecutive adds
+      followUpInputRef.current?.focus();
+    } finally {
+      setIsAddingFollowUp(false);
+    }
+  }, [item.id, followUpText, isAddingFollowUp, onAddFollowUp]);
+
+  const handleFollowUpKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleFollowUpSubmit();
+    } else if (e.key === 'Escape') {
+      setFollowUpText('');
+      followUpInputRef.current?.blur();
+    }
+  }, [handleFollowUpSubmit]);
+
+  const hasFollowUps = item.followUps.length > 0;
+
+  return (
+    <div className={`queue-item-card ${item.isCompleted ? 'completed' : ''} ${isExpanded ? 'expanded' : ''}`}>
+      <div className="queue-item-main">
+        <button
+          className={`queue-item-checkbox ${item.isCompleted ? 'checked' : ''}`}
+          onClick={handleToggleComplete}
+          title={item.isCompleted ? 'Mark as active' : 'Mark as discussed'}
+          aria-label={item.isCompleted ? 'Mark as active' : 'Mark as discussed'}
+        >
+          {item.isCompleted ? '[x]' : '[ ]'}
+        </button>
+        
+        <div className="queue-item-content">
+          <p className={`queue-item-text ${item.isCompleted ? 'completed' : ''}`}>
+            {item.text}
+          </p>
+          <div className="queue-item-meta">
+            <span className="queue-item-time">{formatRelativeTime(item.createdAt)}</span>
+            {hasFollowUps && (
+              <button
+                className="queue-item-followups-btn"
+                onClick={handleToggleExpand}
+                aria-expanded={isExpanded}
+                aria-label={`${item.followUps.length} follow-up${item.followUps.length !== 1 ? 's' : ''}, click to ${isExpanded ? 'collapse' : 'expand'}`}
+              >
+                {item.followUps.length} follow-up{item.followUps.length !== 1 ? 's' : ''} {isExpanded ? '▼' : '▶'}
+              </button>
+            )}
+            {!hasFollowUps && (
+              <button
+                className="queue-item-add-followup-btn"
+                onClick={handleToggleExpand}
+                aria-label="Add follow-up"
+              >
+                [+ follow-up]
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="queue-item-actions">
+          <button
+            className={`queue-item-btn copy ${isCopied ? 'copied' : ''}`}
+            onClick={handleCopy}
+            title="Copy to clipboard"
+            aria-label="Copy to clipboard"
+          >
+            {isCopied ? '[✓]' : '[⎘]'}
+          </button>
+          <button
+            className="queue-item-btn delete"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            title="Delete item"
+            aria-label="Delete item"
+          >
+            [×]
+          </button>
+        </div>
+      </div>
+
+      {/* Expandable follow-up section */}
+      {isExpanded && (
+        <div className="queue-item-followups-section">
+          {/* Existing follow-ups */}
+          {hasFollowUps && (
+            <div className="follow-ups-list">
+              {item.followUps.map((followUp) => (
+                <div key={followUp.id} className="follow-up-item">
+                  <span className="follow-up-prefix">└─</span>
+                  <span className="follow-up-text">{followUp.text}</span>
+                  <span className="follow-up-time">{formatRelativeTime(followUp.createdAt)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add new follow-up input */}
+          <div className="follow-up-input-container">
+            <span className="follow-up-input-prefix">└─</span>
+            <input
+              ref={followUpInputRef}
+              type="text"
+              className="follow-up-input"
+              placeholder="Add follow-up note..."
+              value={followUpText}
+              onChange={(e) => setFollowUpText(e.target.value)}
+              onKeyDown={handleFollowUpKeyDown}
+              disabled={isAddingFollowUp}
+              aria-label="Add follow-up note"
+            />
+            <button
+              className="follow-up-submit-btn"
+              onClick={handleFollowUpSubmit}
+              disabled={!followUpText.trim() || isAddingFollowUp}
+              aria-label="Submit follow-up"
+            >
+              [+]
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

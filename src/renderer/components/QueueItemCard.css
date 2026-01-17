@@ -1,0 +1,117 @@
+/* QueueItemCard component styles */
+.queue-item-card {
+  background-color: var(--matrix-dark);
+  border: 1px solid var(--matrix-green-dark);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-sm);
+  transition: border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.queue-item-card:hover {
+  border-color: var(--matrix-green-dim);
+}
+
+.queue-item-card.completed {
+  opacity: 0.6;
+  border-color: var(--matrix-green-dark);
+}
+
+.queue-item-card.completed:hover {
+  opacity: 0.8;
+}
+
+.queue-item-main {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--spacing-md);
+  gap: var(--spacing-sm);
+}
+
+/* Checkbox button */
+.queue-item-checkbox {
+  background: transparent;
+  border: none;
+  color: var(--matrix-green-dim);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 0.2s ease;
+}
+
+.queue-item-checkbox:hover {
+  color: var(--matrix-green);
+}
+
+.queue-item-checkbox.checked {
+  color: var(--matrix-green);
+}
+
+/* Content area */
+.queue-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.queue-item-text {
+  color: var(--matrix-green);
+  margin-bottom: var(--spacing-xs);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.queue-item-text.completed {
+  text-decoration: line-through;
+  color: var(--matrix-green-dim);
+}
+
+.queue-item-meta {
+  display: flex;
+  gap: var(--spacing-md);
+  font-size: 11px;
+  color: var(--matrix-green-dark);
+}
+
+.queue-item-time {
+  opacity: 0.8;
+}
+
+.queue-item-followups {
+  color: var(--matrix-green-dim);
+}
+
+/* Action buttons */
+.queue-item-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-shrink: 0;
+}
+
+.queue-item-btn {
+  background: transparent;
+  border: none;
+  color: var(--matrix-green-dark);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  transition: color 0.2s ease;
+}
+
+.queue-item-btn:hover {
+  color: var(--matrix-green);
+}
+
+.queue-item-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.queue-item-btn.copy.copied {
+  color: var(--matrix-green);
+}
+
+.queue-item-btn.delete:hover {
+  color: #ff4444;
+}

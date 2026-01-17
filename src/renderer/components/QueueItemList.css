@@ -1,0 +1,71 @@
+/* QueueItemList component styles */
+.queue-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* Loading state */
+.queue-list-loading {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--matrix-green-dim);
+}
+
+.loading-text {
+  margin-right: var(--spacing-xs);
+}
+
+.loading-dots {
+  animation: loading-blink 1.5s infinite;
+}
+
+@keyframes loading-blink {
+  0%, 20% { opacity: 1; }
+  40% { opacity: 0.4; }
+  60% { opacity: 1; }
+  80% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+/* Empty state */
+.queue-list-empty {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--matrix-green-dim);
+}
+
+.empty-title {
+  font-size: 16px;
+  color: var(--matrix-green);
+  margin-bottom: var(--spacing-sm);
+}
+
+.empty-hint {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Section styles */
+.queue-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.queue-section-title {
+  font-size: 12px;
+  font-weight: normal;
+  color: var(--matrix-green-dim);
+  text-transform: lowercase;
+  margin-bottom: var(--spacing-sm);
+  padding-left: var(--spacing-xs);
+}
+
+.queue-section.completed .queue-section-title {
+  color: var(--matrix-green-dark);
+}
+
+.queue-section-items {
+  display: flex;
+  flex-direction: column;
+}
