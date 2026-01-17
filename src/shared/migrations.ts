@@ -7,7 +7,7 @@
  *   completely invalid data.
  */
 
-import type { AppState, QueueItem, FollowUp } from './types';
+import type { AppState, QueueItem, FollowUp, ExperimentalFlags } from './types';
 
 const migrateLearnedDictionary = (raw: unknown): AppState['dictionary'] => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -26,7 +26,32 @@ const migrateLearnedDictionary = (raw: unknown): AppState['dictionary'] => {
   return { tokens };
 };
 
-export const CURRENT_APP_STATE_VERSION = 2;
+const migrateExperimentalFlags = (raw: unknown): Partial<ExperimentalFlags> | undefined => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+
+  const record = raw as Record<string, unknown>;
+  const canvas = record.canvas;
+  const autocomplete = record.autocomplete;
+
+  const next: Partial<ExperimentalFlags> = {};
+
+  if (typeof canvas === 'boolean') next.canvas = canvas;
+  if (typeof autocomplete === 'boolean') next.autocomplete = autocomplete;
+
+  return Object.keys(next).length > 0 ? next : undefined;
+};
+
+const migrateSettings = (raw: unknown): AppState['settings'] => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+
+  const record = raw as Record<string, unknown>;
+  const experimentalFlags = migrateExperimentalFlags(record.experimentalFlags);
+
+  if (!experimentalFlags) return undefined;
+  return { experimentalFlags };
+};
+
+export const CURRENT_APP_STATE_VERSION = 3;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -171,6 +196,7 @@ export const migrateAppState = (raw: unknown): AppState => {
   });
 
   const dictionary = migrateLearnedDictionary((asObject as Record<string, unknown>).dictionary);
+  const settings = migrateSettings((asObject as Record<string, unknown>).settings);
 
   // Upgrade to current version.
   void fromVersion; // reserved for future stepwise migrations
@@ -178,6 +204,7 @@ export const migrateAppState = (raw: unknown): AppState => {
   return {
     items: normalizedItems,
     dictionary,
+    settings,
     version: CURRENT_APP_STATE_VERSION,
   };
 };

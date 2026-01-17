@@ -5,8 +5,7 @@
 
 import React, { useState, useCallback, useRef, useId } from 'react';
 import { QueueItem } from '../../shared/types';
-import { useAutocomplete, useUiEffects } from '../hooks';
-import { experimentalFlags } from '../experimentalFlags';
+import { useAutocomplete, useUiEffects, useExperimentalFlags } from '../hooks';
 import { AutocompletePopover } from './AutocompletePopover';
 import './QueueItemCard.css';
 
@@ -54,6 +53,8 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
   const followUpInputRef = useRef<HTMLInputElement>(null);
 
   const followUpPopoverId = useId();
+
+  const { flags: experimentalFlags } = useExperimentalFlags();
 
   const { state: acState, handleKeyDown: handleAutocompleteKeyDown } = useAutocomplete({
     value: followUpText,

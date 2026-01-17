@@ -13,8 +13,7 @@ import React, {
   forwardRef,
   useId,
 } from 'react';
-import { useAutocomplete } from '../hooks';
-import { experimentalFlags } from '../experimentalFlags';
+import { useAutocomplete, useExperimentalFlags } from '../hooks';
 import { AutocompletePopover } from './AutocompletePopover';
 import './QuickCapture.css';
 
@@ -36,6 +35,8 @@ export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ on
   const inputRef = useRef<HTMLInputElement>(null);
 
   const popoverId = useId();
+
+  const { flags: experimentalFlags } = useExperimentalFlags();
 
   const { state: acState, handleKeyDown: handleAutocompleteKeyDown } = useAutocomplete({
     value: text,

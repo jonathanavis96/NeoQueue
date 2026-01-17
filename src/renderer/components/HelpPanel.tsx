@@ -24,6 +24,8 @@ interface HelpPanelProps {
   onImportJson: () => void;
   scanlinesEnabled: boolean;
   onToggleScanlines: (enabled: boolean) => void;
+  experimentalFlags: { canvas: boolean; autocomplete: boolean };
+  onToggleExperimentalFlag: (key: 'canvas' | 'autocomplete', enabled: boolean) => void;
 }
 
 export const HelpPanel: React.FC<HelpPanelProps> = ({
@@ -40,6 +42,8 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
   onImportJson,
   scanlinesEnabled,
   onToggleScanlines,
+  experimentalFlags,
+  onToggleExperimentalFlag,
 }) => {
   const [exportDateField, setExportDateField] = useState<'createdAt' | 'completedAt'>('createdAt');
   const [exportFrom, setExportFrom] = useState('');
@@ -154,6 +158,29 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
             <li>NeoQueue keeps running in your system tray for quick access.</li>
             <li><strong>Double-click</strong> the tray icon to show NeoQueue.</li>
           </ul>
+
+          <h3 className="help-panel-section-title">Experimental features</h3>
+          <div className="help-panel-effects">
+            <label className="help-panel-toggle">
+              <input
+                type="checkbox"
+                checked={experimentalFlags.canvas}
+                onChange={(e) => onToggleExperimentalFlag('canvas', e.target.checked)}
+              />
+              <span>Canvas view</span>
+            </label>
+            <label className="help-panel-toggle">
+              <input
+                type="checkbox"
+                checked={experimentalFlags.autocomplete}
+                onChange={(e) => onToggleExperimentalFlag('autocomplete', e.target.checked)}
+              />
+              <span>Tab autocomplete</span>
+            </label>
+            <p className="help-panel-effects-hint">
+              These are prototypes. Changes are saved locally.
+            </p>
+          </div>
 
           <h3 className="help-panel-section-title">UI effects</h3>
           <div className="help-panel-effects">

@@ -10,8 +10,7 @@ import React, {
 } from 'react';
 import type { QueueItem } from '../../shared/types';
 import { extractLearnedTokens } from '../../shared/dictionary';
-import { experimentalFlags } from '../experimentalFlags';
-import { useAutocomplete } from '../hooks';
+import { useExperimentalFlags, useAutocomplete } from '../hooks';
 import { AutocompletePopover } from './AutocompletePopover';
 import './CanvasView.css';
 
@@ -54,6 +53,8 @@ export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(({ items, o
 
   const dictionary = useMemo(() => extractLearnedTokens(items), [items]);
   const popoverId = useId();
+
+  const { flags: experimentalFlags } = useExperimentalFlags();
 
   const { state: acState, handleKeyDown: handleAutocompleteKeyDown } = useAutocomplete({
     value: draft?.text ?? '',

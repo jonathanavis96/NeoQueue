@@ -1,11 +1,10 @@
 import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import './styles/App.css';
-import { useQueueData, useKeyboardShortcuts, useUiEffects } from './hooks';
+import { useQueueData, useKeyboardShortcuts, useUiEffects, useExperimentalFlags } from './hooks';
 import { QuickCapture, SearchBox, QueueItemList, HelpPanel, CanvasView } from './components';
 import type { QuickCaptureRef } from './components/QuickCapture';
 import type { SearchBoxRef } from './components/SearchBox';
 import type { CanvasViewRef } from './components/CanvasView';
-import { experimentalFlags } from './experimentalFlags';
 
 const HELP_DISMISSED_KEY = 'neoqueue.help.dismissed';
 
@@ -35,7 +34,16 @@ const App: React.FC = () => {
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const { flags: experimentalFlags, setFlag: setExperimentalFlag } = useExperimentalFlags();
+
   const [activeView, setActiveView] = useState<'list' | 'canvas'>(() => (experimentalFlags.canvas ? 'canvas' : 'list'));
+
+  // If Canvas is turned off while the user is on it, bounce back to list.
+  useEffect(() => {
+    if (!experimentalFlags.canvas && activeView === 'canvas') {
+      setActiveView('list');
+    }
+  }, [activeView, experimentalFlags.canvas]);
 
   const [isStartupBannerVisible, setIsStartupBannerVisible] = useState(false);
   const [startupBannerText, setStartupBannerText] = useState('');
@@ -344,6 +352,10 @@ const App: React.FC = () => {
         }}
         scanlinesEnabled={scanlinesEnabled}
         onToggleScanlines={setScanlinesEnabled}
+        experimentalFlags={experimentalFlags}
+        onToggleExperimentalFlag={(key, enabled) => {
+          void setExperimentalFlag(key, enabled);
+        }}
       />
 
       <main className="app-main" role="main">

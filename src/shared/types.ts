@@ -37,10 +37,28 @@ export interface LearnedDictionary {
   tokens: string[];
 }
 
+export type ExperimentalFlagKey = 'canvas' | 'autocomplete';
+
+export interface ExperimentalFlags {
+  canvas: boolean;
+  autocomplete: boolean;
+}
+
+export interface AppSettings {
+  /**
+   * Experimental flag overrides persisted in AppState.
+   *
+   * Note: flags are optional in persisted data so that older stores/imports can
+   * fall back to build-time defaults (VITE_EXPERIMENTAL_*).
+   */
+  experimentalFlags?: Partial<ExperimentalFlags>;
+}
+
 export interface AppState {
   items: QueueItem[];
   version: number;
   dictionary: LearnedDictionary;
+  settings?: AppSettings;
 }
 
 /**

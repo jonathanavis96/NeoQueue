@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 16:01:24
+Last updated: 2026-01-17 16:14:34
 
 ## Current State
 
@@ -70,7 +70,7 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
 
 ### Low Priority (future direction)
 
-- [ ] **Task 31:** Persist experimental flags as user settings (not only env vars)
+- [x] **Task 31:** Persist experimental flags as user settings (not only env vars)
   - Allow toggling Canvas / Autocomplete from a settings UI.
   - Store via `electron-store` so it participates in export/import/backup.
 
@@ -78,11 +78,26 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
   - Persist node positions; keep the underlying `QueueItem` model.
   - Maintain keyboard-first flows.
 
+- [ ] **Task 33:** Align search behavior with THOUGHTS.md (optional)
+  - Current: one global search query for the list view; does not clear on tab switch; searches item + follow-up text only.
+  - Target: per-tab persisted search (clears when switching tabs) and optionally include timestamps in matches.
+
+- [ ] **Task 34:** Inline edit of item text (optional)
+  - Add a minimal, safe “double-click to edit” flow for Queue items.
+  - Reuse existing `updateItem` plumbing; preserve keyboard-first ergonomics.
+
 ## Discoveries & Notes
 
 **2026-01-17 (Planning update): gap audit**
 - Date-range export is mentioned in THOUGHTS.md but does not exist in `src/`.
 - Secondary backup already exists, but targets `Documents/NeoQueue Backups/` rather than `/mnt/e/...`.
+
+**2026-01-17 (Planning update): additional gaps (optional/future)**
+- THOUGHTS.md search spec differs slightly from current implementation:
+  - Spec: search persists within tab and clears on tab switch; includes timestamps.
+  - Current: single search query across both tabs; filters item + follow-up text only.
+- THOUGHTS.md mentions double-click edit; current code has `updateItem` in `useQueueData` but no UI affordance.
+- Experimental flags are env-var driven only; no settings UI exists to toggle them at runtime.
 
 **2026-01-17 (Build): Task 28 complete**
 - Updated *true empty* messaging to be Matrix-flavored (Queue + Discussed).
@@ -97,6 +112,11 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
 - Secondary backup location can now be customized via the tray menu (set folder / revert to default).
 - Detects and offers the legacy `/mnt/e/6 - Text/a - Work/Code` path when present.
 - Backup remains best-effort and non-blocking; failures log warnings but don't break saves.
+
+**2026-01-17 (Build): Task 31 complete**
+- Experimental flags (Canvas / Autocomplete) are now persisted in AppState under `settings.experimentalFlags`.
+- Help panel includes toggles for these experimental features.
+- Runtime flag evaluation uses persisted overrides layered on top of Vite env defaults (env remains the baseline).
 
 ---
 

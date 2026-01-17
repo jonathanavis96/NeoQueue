@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/index.css';
-import { UiEffectsProvider } from './hooks';
+import { UiEffectsProvider, ExperimentalFlagsProvider } from './hooks';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -11,7 +11,9 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <UiEffectsProvider>
-      <App />
+      <ExperimentalFlagsProvider>
+        <App />
+      </ExperimentalFlagsProvider>
     </UiEffectsProvider>
   </React.StrictMode>
 );

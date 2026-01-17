@@ -19,7 +19,18 @@ const parseBooleanEnv = (value: string | boolean | undefined): boolean => {
   return value === 'true' || value === '1' || value.toLowerCase() === 'yes';
 };
 
-export const experimentalFlags: ExperimentalFlags = Object.freeze({
-  canvas: parseBooleanEnv(import.meta.env.VITE_EXPERIMENTAL_CANVAS),
-  autocomplete: parseBooleanEnv(import.meta.env.VITE_EXPERIMENTAL_AUTOCOMPLETE),
-});
+export const getEnvExperimentalFlags = (): ExperimentalFlags =>
+  Object.freeze({
+    canvas: parseBooleanEnv(import.meta.env.VITE_EXPERIMENTAL_CANVAS),
+    autocomplete: parseBooleanEnv(import.meta.env.VITE_EXPERIMENTAL_AUTOCOMPLETE),
+  });
+
+export const mergeExperimentalFlags = (
+  base: ExperimentalFlags,
+  overrides?: Partial<ExperimentalFlags>
+): ExperimentalFlags => {
+  return {
+    canvas: typeof overrides?.canvas === 'boolean' ? overrides.canvas : base.canvas,
+    autocomplete: typeof overrides?.autocomplete === 'boolean' ? overrides.autocomplete : base.autocomplete,
+  };
+};
