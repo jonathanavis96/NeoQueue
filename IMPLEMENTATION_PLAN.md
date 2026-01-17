@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 16:14:34
+Last updated: 2026-01-17 16:22:46
 
 ## Current State
 
@@ -74,7 +74,7 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
   - Allow toggling Canvas / Autocomplete from a settings UI.
   - Store via `electron-store` so it participates in export/import/backup.
 
-- [ ] **Task 32:** Canvas prototype v2 (layout persistence + basic drag)
+- [x] **Task 32:** Canvas prototype v2 (layout persistence + basic drag)
   - Persist node positions; keep the underlying `QueueItem` model.
   - Maintain keyboard-first flows.
 
@@ -117,6 +117,11 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
 - Experimental flags (Canvas / Autocomplete) are now persisted in AppState under `settings.experimentalFlags`.
 - Help panel includes toggles for these experimental features.
 - Runtime flag evaluation uses persisted overrides layered on top of Vite env defaults (env remains the baseline).
+
+**2026-01-17 (Build): Task 32 complete**
+- Added Canvas layout persistence via `settings.canvasLayout.positions` (keyed by `QueueItem.id`, stored as `%` coordinates).
+- Canvas nodes are now draggable; drag updates are applied optimistically during drag and persisted on pointer release.
+- `CURRENT_APP_STATE_VERSION` bumped to 4; migration is best-effort and clamps invalid coordinates.
 
 ---
 

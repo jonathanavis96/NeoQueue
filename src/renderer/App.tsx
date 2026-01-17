@@ -19,6 +19,8 @@ const App: React.FC = () => {
     toggleComplete,
     deleteItem,
     addFollowUp,
+    canvasPositions,
+    setCanvasPosition,
     exportJson,
     exportMarkdown,
     exportJsonScoped,
@@ -367,7 +369,14 @@ const App: React.FC = () => {
             disabled={isLoading}
           />
         ) : (
-          <CanvasView ref={canvasRef} items={items} onAddItem={addItemWithFx} isLoading={isLoading} />
+          <CanvasView
+            ref={canvasRef}
+            items={items}
+            positions={canvasPositions}
+            onMoveItem={setCanvasPosition}
+            onAddItem={addItemWithFx}
+            isLoading={isLoading}
+          />
         )}
 
         {isStartupBannerVisible && (

@@ -44,6 +44,22 @@ export interface ExperimentalFlags {
   autocomplete: boolean;
 }
 
+export type CanvasNodePosition = {
+  /** Left position as a percentage of the canvas width (0-100). */
+  leftPct: number;
+  /** Top position as a percentage of the canvas height (0-100). */
+  topPct: number;
+};
+
+export interface CanvasLayoutSettings {
+  /**
+   * Node positions keyed by QueueItem.id.
+   *
+   * Why: Lets the Canvas prototype persist a stable layout without changing the core QueueItem model.
+   */
+  positions: Record<string, CanvasNodePosition>;
+}
+
 export interface AppSettings {
   /**
    * Experimental flag overrides persisted in AppState.
@@ -52,6 +68,9 @@ export interface AppSettings {
    * fall back to build-time defaults (VITE_EXPERIMENTAL_*).
    */
   experimentalFlags?: Partial<ExperimentalFlags>;
+
+  /** Optional persisted Canvas layout data (experimental). */
+  canvasLayout?: CanvasLayoutSettings;
 }
 
 export interface AppState {

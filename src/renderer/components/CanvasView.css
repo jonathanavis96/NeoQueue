@@ -30,6 +30,8 @@
 
 .canvas-node {
   position: absolute;
+  cursor: grab;
+  user-select: none;
   max-width: 220px;
   padding: 6px 8px;
   border: 1px solid var(--matrix-green-dark);
@@ -42,6 +44,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   transform: translate(-50%, -50%);
+}
+
+.canvas-node:active {
+  cursor: grabbing;
 }
 
 .canvas-node.completed {

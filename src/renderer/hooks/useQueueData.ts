@@ -4,7 +4,15 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { QueueItem, AppState, ExportScope, ExportDateRange, ExportOptions } from '../../shared/types';
+import {
+  QueueItem,
+  AppState,
+  AppSettings,
+  CanvasNodePosition,
+  ExportScope,
+  ExportDateRange,
+  ExportOptions,
+} from '../../shared/types';
 import { CURRENT_APP_STATE_VERSION } from '../../shared/migrations';
 import { extractLearnedTokens } from '../../shared/dictionary';
 
@@ -19,6 +27,11 @@ interface UseQueueDataResult {
   dictionaryTokens: string[];
   isLoading: boolean;
   error: string | null;
+  /** Persisted app settings loaded from AppState (best-effort). */
+  settings?: AppSettings;
+  /** Canvas layout positions keyed by item id (empty if unset). */
+  canvasPositions: Record<string, CanvasNodePosition>;
+  setCanvasPosition: (id: string, position: CanvasNodePosition) => Promise<void>;
   addItem: (text: string) => Promise<void>;
   updateItem: (id: string, updates: Partial<QueueItem>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
@@ -52,6 +65,7 @@ export const useQueueData = (): UseQueueDataResult => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [undoSnapshot, setUndoSnapshot] = useState<UndoSnapshot | null>(null);
+  const [settings, setSettings] = useState<AppSettings | undefined>(undefined);
 
   // Load data on mount
   useEffect(() => {
@@ -61,6 +75,8 @@ export const useQueueData = (): UseQueueDataResult => {
         setError(null);
         const response = await window.electronAPI.loadData();
         if (response.success && response.data) {
+          setSettings(response.data.settings);
+
           // Convert date strings back to Date objects
           const itemsWithDates = response.data.items.map((item) => ({
             ...item,
@@ -91,22 +107,29 @@ export const useQueueData = (): UseQueueDataResult => {
   }, []);
 
   // Build AppState (used for save + export)
-  const buildAppState = useCallback((newItems: QueueItem[]): AppState => {
-    return {
-      items: newItems,
-      dictionary: { tokens: extractLearnedTokens(newItems) },
-      version: CURRENT_APP_STATE_VERSION,
-    };
-  }, []);
+  const buildAppState = useCallback(
+    (newItems: QueueItem[], nextSettings: AppSettings | undefined): AppState => {
+      return {
+        items: newItems,
+        dictionary: { tokens: extractLearnedTokens(newItems) },
+        settings: nextSettings,
+        version: CURRENT_APP_STATE_VERSION,
+      };
+    },
+    []
+  );
 
   // Save data helper
-  const saveData = useCallback(async (newItems: QueueItem[]) => {
-    const appState = buildAppState(newItems);
-    const response = await window.electronAPI.saveData(appState);
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to save data');
-    }
-  }, [buildAppState]);
+  const saveData = useCallback(
+    async (newItems: QueueItem[], nextSettings: AppSettings | undefined) => {
+      const appState = buildAppState(newItems, nextSettings);
+      const response = await window.electronAPI.saveData(appState);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to save data');
+      }
+    },
+    [buildAppState]
+  );
 
   // Add a new item
   const addItem = useCallback(async (text: string) => {
@@ -126,14 +149,14 @@ export const useQueueData = (): UseQueueDataResult => {
     setItems(newItems);
 
     try {
-      await saveData(newItems);
+      await saveData(newItems, settings);
       setUndoSnapshot({ items: prevItems, label: 'add' });
     } catch (err) {
       // Rollback on error
       setItems(prevItems);
       setError(String(err));
     }
-  }, [items, saveData]);
+  }, [items, saveData, settings]);
 
   // Update an existing item
   const updateItem = useCallback(async (id: string, updates: Partial<QueueItem>) => {
@@ -145,12 +168,12 @@ export const useQueueData = (): UseQueueDataResult => {
     setItems(newItems);
 
     try {
-      await saveData(newItems);
+      await saveData(newItems, settings);
     } catch (err) {
       setItems(prevItems);
       setError(String(err));
     }
-  }, [items, saveData]);
+  }, [items, saveData, settings]);
 
   // Delete an item
   const deleteItem = useCallback(async (id: string) => {
@@ -163,13 +186,13 @@ export const useQueueData = (): UseQueueDataResult => {
     setItems(newItems);
 
     try {
-      await saveData(newItems);
+      await saveData(newItems, settings);
       setUndoSnapshot({ items: prevItems, label: 'delete' });
     } catch (err) {
       setItems(prevItems);
       setError(String(err));
     }
-  }, [items, saveData]);
+  }, [items, saveData, settings]);
 
   // Toggle item completion status
   const toggleComplete = useCallback(async (id: string) => {
@@ -191,13 +214,13 @@ export const useQueueData = (): UseQueueDataResult => {
     setItems(newItems);
 
     try {
-      await saveData(newItems);
+      await saveData(newItems, settings);
       setUndoSnapshot({ items: prevItems, label: 'toggleComplete' });
     } catch (err) {
       setItems(prevItems);
       setError(String(err));
     }
-  }, [items, saveData]);
+  }, [items, saveData, settings]);
 
   // Add a follow-up to an item
   const addFollowUp = useCallback(async (itemId: string, text: string) => {
@@ -220,12 +243,12 @@ export const useQueueData = (): UseQueueDataResult => {
     setItems(newItems);
 
     try {
-      await saveData(newItems);
+      await saveData(newItems, settings);
     } catch (err) {
       setItems(prevItems);
       setError(String(err));
     }
-  }, [items, saveData]);
+  }, [items, saveData, settings]);
 
   const parseYyyyMmDd = useCallback((value: string): Date | null => {
     const match = /^\d{4}-\d{2}-\d{2}$/.exec(value.trim());
@@ -271,8 +294,8 @@ export const useQueueData = (): UseQueueDataResult => {
 
     const finalItems = dateRange ? applyDateRange(scopeItems, dateRange) : scopeItems;
 
-    return buildAppState(finalItems);
-  }, [applyDateRange, buildAppState, items]);
+    return buildAppState(finalItems, settings);
+  }, [applyDateRange, buildAppState, items, settings]);
 
   const exportJsonScopedDateRange = useCallback(
     async (scope: ExportScope, dateRange: ExportDateRange) => {
@@ -325,14 +348,14 @@ export const useQueueData = (): UseQueueDataResult => {
     setItems(undoItems);
 
     try {
-      await saveData(undoItems);
+      await saveData(undoItems, settings);
       setUndoSnapshot(null);
     } catch (err) {
       // Roll back the undo attempt and keep the snapshot (so the user can retry).
       setItems(beforeUndoItems);
       setError(String(err));
     }
-  }, [items, saveData, undoSnapshot]);
+  }, [items, saveData, settings, undoSnapshot]);
 
   const exportMarkdownScopedDateRange = useCallback(
     async (scope: ExportScope, dateRange: ExportDateRange) => {
@@ -394,6 +417,7 @@ export const useQueueData = (): UseQueueDataResult => {
       }));
 
       setItems(importedItems);
+      setSettings(response.data.settings);
       setUndoSnapshot(null);
       setError(null);
     } catch (err) {
@@ -402,13 +426,50 @@ export const useQueueData = (): UseQueueDataResult => {
     }
   }, []);
 
+  const canvasPositions = useMemo(() => settings?.canvasLayout?.positions ?? {}, [settings]);
+
+  const setCanvasPosition = useCallback(
+    async (id: string, position: CanvasNodePosition) => {
+      const safeId = id.trim();
+      if (!safeId) return;
+
+      const nextSettings: AppSettings = {
+        ...(settings ?? {}),
+        canvasLayout: {
+          positions: {
+            ...(settings?.canvasLayout?.positions ?? {}),
+            [safeId]: {
+              leftPct: position.leftPct,
+              topPct: position.topPct,
+            },
+          },
+        },
+      };
+
+      // Optimistic: update local settings state immediately.
+      setSettings(nextSettings);
+
+      try {
+        await saveData(items, nextSettings);
+      } catch (err) {
+        // Revert on save failure.
+        setSettings(settings);
+        setError(String(err));
+      }
+    },
+    [items, saveData, settings]
+  );
+
   const dictionaryTokens = useMemo(() => extractLearnedTokens(items), [items]);
 
-  return { 
+  return {
     items,
     dictionaryTokens,
     isLoading,
     error,
+    settings,
+    canvasPositions,
+    setCanvasPosition,
     addItem,
     updateItem,
     deleteItem,

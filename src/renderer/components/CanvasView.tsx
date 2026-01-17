@@ -8,7 +8,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import type { QueueItem } from '../../shared/types';
+import type { CanvasNodePosition, QueueItem } from '../../shared/types';
 import { extractLearnedTokens } from '../../shared/dictionary';
 import { useExperimentalFlags, useAutocomplete } from '../hooks';
 import { AutocompletePopover } from './AutocompletePopover';
@@ -26,6 +26,9 @@ interface Draft {
 
 interface CanvasViewProps {
   items: QueueItem[];
+  /** Optional persisted positions keyed by item id. */
+  positions: Record<string, CanvasNodePosition>;
+  onMoveItem: (id: string, position: CanvasNodePosition) => Promise<void>;
   onAddItem: (text: string) => Promise<void>;
   isLoading: boolean;
 }
@@ -43,8 +46,21 @@ const hashToUnit = (input: string): number => {
   return (hash >>> 0) / 2 ** 32;
 };
 
-export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(({ items, onAddItem, isLoading }, ref) => {
+export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(
+  ({ items, positions, onMoveItem, onAddItem, isLoading }, ref) => {
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const [dragPositions, setDragPositions] = useState<Record<string, CanvasNodePosition>>({});
+  const dragRef = useRef<{
+    id: string;
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    startLeftPct: number;
+    startTopPct: number;
+    didDrag: boolean;
+    rafId: number | null;
+  } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -163,10 +179,19 @@ export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(({ items, o
     }
   }, [draft, handleAutocompleteKeyDown, isSubmitting, isLoading, onAddItem]);
 
+  const effectivePositions = useMemo(
+    () => ({ ...positions, ...dragPositions }),
+    [dragPositions, positions]
+  );
+
   const layout = useMemo(() => {
-    // No layout persistence in the prototype. We still want items visible on the canvas,
-    // so we scatter them deterministically based on id.
     return items.map((item) => {
+      const persisted = effectivePositions[item.id];
+      if (persisted) {
+        return { item, leftPct: persisted.leftPct, topPct: persisted.topPct };
+      }
+
+      // No persisted layout yet. Scatter deterministically based on id.
       const u1 = hashToUnit(item.id);
       const u2 = hashToUnit(`${item.id}:y`);
       return {
@@ -175,7 +200,92 @@ export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(({ items, o
         topPct: 12 + u2 * 78,
       };
     });
-  }, [items]);
+  }, [effectivePositions, items]);
+
+  const scheduleDragUpdate = useCallback((id: string, next: CanvasNodePosition) => {
+    const current = dragRef.current;
+    if (!current || current.id !== id) return;
+
+    if (current.rafId != null) cancelAnimationFrame(current.rafId);
+    current.rafId = window.requestAnimationFrame(() => {
+      setDragPositions((prev) => ({ ...prev, [id]: next }));
+    });
+  }, []);
+
+  const finalizeDrag = useCallback(async () => {
+    const current = dragRef.current;
+    if (!current) return;
+
+    const id = current.id;
+    const pos = dragPositions[id];
+
+    dragRef.current = null;
+
+    if (!pos || !current.didDrag) {
+      setDragPositions((prev) => {
+        // Remove the temporary drag position for this item.
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [id]: _removed, ...rest } = prev;
+        return rest;
+      });
+      return;
+    }
+
+    try {
+      await onMoveItem(id, pos);
+    } finally {
+      setDragPositions((prev) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [id]: _removed, ...rest } = prev;
+        return rest;
+      });
+    }
+  }, [dragPositions, onMoveItem]);
+
+  useEffect(() => {
+    const handlePointerMove = (event: Event) => {
+      if (!(event instanceof PointerEvent)) return;
+
+      const current = dragRef.current;
+      if (!current || event.pointerId !== current.pointerId) return;
+      const surface = containerRef.current;
+      if (!surface) return;
+
+      // Avoid scrolling/selection during drag on touch/trackpads.
+      event.preventDefault();
+
+      const rect = surface.getBoundingClientRect();
+      const dx = event.clientX - current.startClientX;
+      const dy = event.clientY - current.startClientY;
+
+      if (!current.didDrag && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+        current.didDrag = true;
+      }
+
+      const nextLeftPct = clamp(current.startLeftPct + (dx / rect.width) * 100, 0, 100);
+      const nextTopPct = clamp(current.startTopPct + (dy / rect.height) * 100, 0, 100);
+
+      scheduleDragUpdate(current.id, { leftPct: nextLeftPct, topPct: nextTopPct });
+    };
+
+    const handlePointerUp = (event: Event) => {
+      if (!(event instanceof PointerEvent)) return;
+
+      const current = dragRef.current;
+      if (!current || event.pointerId !== current.pointerId) return;
+      void finalizeDrag();
+    };
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: false });
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+    };
+  }, [finalizeDrag, scheduleDragUpdate]);
 
   return (
     <div className="canvas-root">
@@ -187,7 +297,14 @@ export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(({ items, o
         className={`canvas-surface ${isLoading ? 'is-loading' : ''}`}
         role="region"
         aria-label="Canvas view"
-        onClick={handleContainerClick}
+        onClick={(e) => {
+          // If a drag just happened, ignore the click.
+          if (dragRef.current?.didDrag) {
+            e.preventDefault();
+            return;
+          }
+          handleContainerClick(e);
+        }}
       >
         {layout.map(({ item, leftPct, topPct }) => (
           <div
@@ -195,6 +312,37 @@ export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(({ items, o
             className={`canvas-node ${item.isCompleted ? 'completed' : ''}`}
             style={{ left: `${leftPct}%`, top: `${topPct}%` }}
             title={item.text}
+            role="button"
+            tabIndex={0}
+            onPointerDown={(e) => {
+              if (e.button !== 0) return;
+              e.stopPropagation();
+
+              const surface = containerRef.current;
+              if (!surface) return;
+              const start = effectivePositions[item.id] ?? { leftPct, topPct };
+
+              dragRef.current = {
+                id: item.id,
+                pointerId: e.pointerId,
+                startClientX: e.clientX,
+                startClientY: e.clientY,
+                startLeftPct: start.leftPct,
+                startTopPct: start.topPct,
+                didDrag: false,
+                rafId: null,
+              };
+
+              // Make sure we have a local position entry during drag.
+              setDragPositions((prev) => ({ ...prev, [item.id]: start }));
+
+              // Capture pointer so we continue getting events.
+              surface.setPointerCapture(e.pointerId);
+
+              // Prevent text selection.
+              window.getSelection?.()?.removeAllRanges();
+
+            }}
           >
             {item.text}
           </div>
