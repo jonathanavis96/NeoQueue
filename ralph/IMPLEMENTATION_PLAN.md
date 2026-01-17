@@ -72,7 +72,7 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
   - Update @vitejs/plugin-react to compatible version
   - Validation: `npm run dev` works, hot reload works, `vite build` succeeds
 
-- [ ] **Task 37:** Update electron-builder and tar (fixes Arbitrary File Overwrite - GHSA-8qq5-rm4j-mr97)
+- [x] **Task 37:** Update electron-builder and tar (fixes Arbitrary File Overwrite - GHSA-8qq5-rm4j-mr97)
   - Current: electron-builder@24.9.1 (depends on vulnerable tar versions)
   - Target: electron-builder@latest stable (25.x or newer)
   - Check build configuration compatibility in package.json
@@ -199,6 +199,24 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
   - `npm run dev:vite` ✓ (dev server starts successfully, hot reload active)
 - No vite.config.ts changes required - configuration compatible with Vite 6.x
 - Vite 5 → 6 migration was seamless, no breaking API changes affected this project
+
+**2026-01-17 (Build): Task 37 complete**
+- electron-builder updated to v26.4.0 (from 24.9.1)
+- Full validation suite passed:
+  - `npm run type-check` ✓ (no type errors)
+  - `npm run lint` ✓ (no linting errors)
+  - `npm run build` ✓ (production build succeeded in 911ms)
+  - `npm run package` ✓ (AppImage 108MB created successfully)
+- No build configuration changes required - package.json "build" section compatible with 26.x
+- **tar vulnerability (GHSA-8qq5-rm4j-mr97) remains unresolved:**
+  - Vulnerability affects tar <= 7.5.2; fix is tar@7.5.3 (released 2026-01-16)
+  - electron-builder@26.4.0 → app-builder-lib@26.4.0 → @electron/rebuild@4.0.1 → tar@6.2.1
+  - Attempted override to tar@7.5.3 fails: @electron/rebuild incompatible with tar 7.x (ESM export changes)
+  - Attempted override to @electron/rebuild@4.0.2: same incompatibility
+  - **Status:** 6 high severity vulnerabilities remain, all related to tar in electron-builder dependency chain
+  - **Risk assessment:** Vulnerability is in build-time tooling (app-builder-lib, @electron/rebuild), not runtime
+  - **Mitigation:** Wait for upstream @electron/rebuild or app-builder-lib to update tar dependency
+  - Documented for Task 38 final security audit
 
 ---
 
