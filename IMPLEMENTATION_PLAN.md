@@ -59,7 +59,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - [x] Add a **close-to-tray** option (intercept window close event and hide instead)
     - Persist setting (implemented via `electron-store`, toggled via tray menu)
   - [x] Remember window size/position across restarts (`BrowserWindow.getBounds()` → persist → restore)
-  - [ ] Ensure behavior is sane on multi-monitor changes (fallback to centered default)
+  - [x] Ensure behavior is sane on multi-monitor changes (fallback to centered default)
 
 ### Medium Priority
 

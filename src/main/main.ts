@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, nativeImage, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, nativeImage, dialog, screen } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
@@ -99,6 +99,57 @@ const getSavedWindowState = (): WindowState | null => {
   if (width < 200 || height < 150) return null;
 
   return { bounds: { x, y, width, height }, isMaximized };
+};
+
+const doRectsIntersect = (a: Electron.Rectangle, b: Electron.Rectangle, minIntersection = 64): boolean => {
+  const x1 = Math.max(a.x, b.x);
+  const y1 = Math.max(a.y, b.y);
+  const x2 = Math.min(a.x + a.width, b.x + b.width);
+  const y2 = Math.min(a.y + a.height, b.y + b.height);
+
+  const intersectionWidth = x2 - x1;
+  const intersectionHeight = y2 - y1;
+
+  return intersectionWidth >= minIntersection && intersectionHeight >= minIntersection;
+};
+
+const isBoundsVisibleOnAnyDisplay = (bounds: Electron.Rectangle): boolean => {
+  // Work area excludes taskbar/dock; better UX for ensuring window isn't hidden.
+  const displays = screen.getAllDisplays();
+  return displays.some((d) => doRectsIntersect(bounds, d.workArea));
+};
+
+const getCenteredBounds = (width: number, height: number): Electron.Rectangle => {
+  const primary = screen.getPrimaryDisplay();
+  const workArea = primary.workArea;
+
+  // Ensure the window fits on the primary display. BrowserWindow minWidth/minHeight
+  // is enforced later, but centering with a too-large size can still place it oddly.
+  const clampedWidth = Math.min(width, workArea.width);
+  const clampedHeight = Math.min(height, workArea.height);
+
+  const x = Math.round(workArea.x + (workArea.width - clampedWidth) / 2);
+  const y = Math.round(workArea.y + (workArea.height - clampedHeight) / 2);
+
+  return { x, y, width: clampedWidth, height: clampedHeight };
+};
+
+const getInitialWindowState = (): WindowState => {
+  const saved = getSavedWindowState();
+  if (!saved) {
+    return { bounds: getCenteredBounds(800, 600), isMaximized: false };
+  }
+
+  // Multi-monitor sanity check: if the saved bounds are no longer visible (e.g.,
+  // monitor disconnected), fall back to a centered window on the primary display.
+  if (!isBoundsVisibleOnAnyDisplay(saved.bounds)) {
+    return {
+      bounds: getCenteredBounds(saved.bounds.width, saved.bounds.height),
+      isMaximized: false,
+    };
+  }
+
+  return saved;
 };
 
 const saveWindowState = (win: BrowserWindow): void => {
@@ -452,13 +503,13 @@ const createWindow = (): void => {
   // Create the browser window.
   const appIcon = getAppIcon();
 
-  const savedWindowState = getSavedWindowState();
+  const savedWindowState = getInitialWindowState();
 
   mainWindow = new BrowserWindow({
-    width: savedWindowState?.bounds.width ?? 800,
-    height: savedWindowState?.bounds.height ?? 600,
-    x: savedWindowState?.bounds.x,
-    y: savedWindowState?.bounds.y,
+    width: savedWindowState.bounds.width,
+    height: savedWindowState.bounds.height,
+    x: savedWindowState.bounds.x,
+    y: savedWindowState.bounds.y,
     minWidth: 400,
     minHeight: 300,
     backgroundColor: '#0a0a0a',
