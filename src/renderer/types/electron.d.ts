@@ -26,6 +26,7 @@ declare global {
       getVersion: () => Promise<string>;
       exportJson: (data: AppState) => Promise<{ success: boolean; canceled?: boolean; filePath?: string; error?: string }>;
       exportMarkdown: (data: AppState) => Promise<{ success: boolean; canceled?: boolean; filePath?: string; error?: string }>;
+      importJson: () => Promise<{ success: boolean; canceled?: boolean; data?: AppState; error?: string }>;
       onNewItemShortcut: (callback: ShortcutCallback) => () => void;
       onShowWindow: (callback: ShortcutCallback) => () => void;
     };

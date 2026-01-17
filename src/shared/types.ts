@@ -41,6 +41,7 @@ export const IPC_CHANNELS = {
   GET_VERSION: 'get-version',
   EXPORT_JSON: 'export-json',
   EXPORT_MARKDOWN: 'export-markdown',
+  IMPORT_JSON: 'import-json',
   // Keyboard shortcut events from main to renderer
   SHORTCUT_NEW_ITEM: 'shortcut:new-item',
   SHORTCUT_TOGGLE_WINDOW: 'shortcut:toggle-window',

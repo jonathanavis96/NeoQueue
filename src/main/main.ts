@@ -248,6 +248,126 @@ ipcMain.handle(IPC_CHANNELS.EXPORT_MARKDOWN, async (_event, data: AppState) => {
   }
 });
 
+const normalizeImportedAppState = (raw: unknown): AppState => {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Invalid import: expected a JSON object');
+  }
+
+  const candidate = raw as Partial<AppState> & { items?: unknown };
+  const itemsRaw = (candidate as { items?: unknown }).items;
+
+  if (!Array.isArray(itemsRaw)) {
+    throw new Error('Invalid import: missing "items" array');
+  }
+
+  const version = typeof candidate.version === 'number' ? candidate.version : 1;
+
+  const toDate = (value: unknown): Date => {
+    if (value instanceof Date) return value;
+    if (typeof value === 'string' && value.trim().length > 0) {
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) throw new Error('Invalid date value in import');
+      return parsed;
+    }
+    if (typeof value === 'number') {
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) throw new Error('Invalid date value in import');
+      return parsed;
+    }
+    throw new Error('Invalid date value in import');
+  };
+
+  const items = itemsRaw.map((itemRaw) => {
+    if (!itemRaw || typeof itemRaw !== 'object') {
+      throw new Error('Invalid import: item must be an object');
+    }
+
+    const item = itemRaw as Record<string, unknown>;
+
+    const id = String(item.id ?? '');
+    const text = String(item.text ?? '');
+    const isCompleted = Boolean(item.isCompleted);
+
+    if (!id.trim()) throw new Error('Invalid import: item missing id');
+    if (!text.trim()) throw new Error('Invalid import: item missing text');
+
+    const createdAt = toDate(item.createdAt);
+    const completedAt = item.completedAt == null ? undefined : toDate(item.completedAt);
+
+    const followUpsRaw = Array.isArray(item.followUps) ? item.followUps : [];
+    const followUps = followUpsRaw.map((fuRaw) => {
+      if (!fuRaw || typeof fuRaw !== 'object') {
+        throw new Error('Invalid import: follow-up must be an object');
+      }
+
+      const fu = fuRaw as Record<string, unknown>;
+      const fuId = String(fu.id ?? '');
+      const fuText = String(fu.text ?? '');
+      if (!fuId.trim()) throw new Error('Invalid import: follow-up missing id');
+      if (!fuText.trim()) throw new Error('Invalid import: follow-up missing text');
+
+      return {
+        id: fuId,
+        text: fuText,
+        createdAt: toDate(fu.createdAt),
+      };
+    });
+
+    return {
+      id,
+      text,
+      createdAt,
+      completedAt,
+      isCompleted,
+      followUps,
+    };
+  });
+
+  return { items, version };
+};
+
+ipcMain.handle(IPC_CHANNELS.IMPORT_JSON, async () => {
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: 'Import NeoQueue data (JSON)',
+      properties: ['openFile'],
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+
+    if (canceled || !filePaths?.[0]) {
+      return { success: true, canceled: true };
+    }
+
+    const filePath = filePaths[0];
+    const rawText = await fs.promises.readFile(filePath, { encoding: 'utf8' });
+    const parsed = JSON.parse(rawText) as unknown;
+    const normalized = normalizeImportedAppState(parsed);
+
+    const confirm = await dialog.showMessageBox({
+      type: 'warning',
+      buttons: ['Overwrite current data', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      title: 'Overwrite NeoQueue data?',
+      message: 'Import will overwrite your current NeoQueue items.',
+      detail: `You are about to import ${normalized.items.length} item(s) from:\n${filePath}\n\nTip: export first if you want a backup.`,
+      noLink: true,
+    });
+
+    if (confirm.response !== 0) {
+      return { success: true, canceled: true };
+    }
+
+    store.set('appState', normalized);
+    scheduleSecondaryBackup(normalized);
+
+    return { success: true, data: normalized };
+  } catch (error) {
+    console.error('Failed to import JSON:', error);
+    return { success: false, error: String(error) };
+  }
+});
+
 const createWindow = (): void => {
   // Create the browser window.
   const appIcon = getAppIcon();

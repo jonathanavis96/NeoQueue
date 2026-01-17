@@ -16,6 +16,7 @@ interface HelpPanelProps {
   onDismissForever: () => void;
   onExportJson: () => void;
   onExportMarkdown: () => void;
+  onImportJson: () => void;
   scanlinesEnabled: boolean;
   onToggleScanlines: (enabled: boolean) => void;
 }
@@ -26,6 +27,7 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
   onDismissForever,
   onExportJson,
   onExportMarkdown,
+  onImportJson,
   scanlinesEnabled,
   onToggleScanlines,
 }) => {
@@ -154,6 +156,9 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
             </button>
             <button type="button" className="help-panel-secondary" onClick={onExportMarkdown}>
               Export notes (Markdown)
+            </button>
+            <button type="button" className="help-panel-secondary" onClick={onImportJson}>
+              Import data (JSON)
             </button>
             <button type="button" className="help-panel-primary" onClick={onClose}>
               Got it

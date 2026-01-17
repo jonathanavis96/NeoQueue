@@ -25,6 +25,7 @@ interface UseQueueDataResult {
   undo: () => Promise<void>;
   exportJson: () => Promise<void>;
   exportMarkdown: () => Promise<void>;
+  importJson: () => Promise<void>;
 }
 
 // Generate a simple UUID (v4-like)
@@ -259,7 +260,35 @@ export const useQueueData = (): UseQueueDataResult => {
     }
   }, [buildAppState, items]);
 
-  return {
+  const importJson = useCallback(async () => {
+    try {
+      const response = await window.electronAPI.importJson();
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to import JSON');
+      }
+
+      if (response.canceled || !response.data) return;
+
+      const importedItems = response.data.items.map((item) => ({
+        ...item,
+        createdAt: new Date(item.createdAt),
+        completedAt: item.completedAt ? new Date(item.completedAt) : undefined,
+        followUps: item.followUps.map((fu) => ({
+          ...fu,
+          createdAt: new Date(fu.createdAt),
+        })),
+      }));
+
+      setItems(importedItems);
+      setUndoSnapshot(null);
+      setError(null);
+    } catch (err) {
+      setError(String(err));
+      throw err;
+    }
+  }, []);
+
+  return { 
     items,
     isLoading,
     error,
@@ -272,5 +301,6 @@ export const useQueueData = (): UseQueueDataResult => {
     undo,
     exportJson,
     exportMarkdown,
+    importJson,
   };
 };

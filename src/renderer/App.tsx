@@ -19,6 +19,7 @@ const App: React.FC = () => {
     addFollowUp,
     exportJson,
     exportMarkdown,
+    importJson,
     canUndo,
     undo,
   } = useQueueData();
@@ -168,6 +169,14 @@ const App: React.FC = () => {
           } catch (e) {
             // Keep the help panel open; surface error in app error box.
             // useQueueData already sets error on failure paths.
+            // eslint-disable-next-line no-console
+            console.error(e);
+          }
+        }}
+        onImportJson={async () => {
+          try {
+            await importJson();
+          } catch (e) {
             // eslint-disable-next-line no-console
             console.error(e);
           }

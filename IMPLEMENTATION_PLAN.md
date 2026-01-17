@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 13:47:15
+Last updated: 2026-01-17 13:51:01
 
 ## Current State
 
@@ -55,9 +55,9 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - [x] Optional: **undo** (single-step) for the most recent destructive action (complete/restore/delete/add).
     - Keep scope tight: single-step, in-memory history only; clear history on restart.
     - Must be safe with persistence (no corrupt state; graceful if undo fails).
-  - [ ] Optional: **import JSON** (round-trip with export)
-    - Use file picker in main process; validate schema + migrate dates.
-    - Guardrails: show confirmation before overwriting current state.
+  - [x] Optional: **import JSON** (round-trip with export)
+    - Uses file picker in main process; validates schema and migrates dates.
+    - Guardrails: shows confirmation before overwriting current state.
 
 - [ ] **Task 17:** Window behavior polish
   - [ ] Add a **close-to-tray** option (intercept window close event and hide instead)
