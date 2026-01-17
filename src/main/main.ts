@@ -55,10 +55,64 @@ const store = new Store<{ appState: AppState }>({
   },
 });
 
+/**
+ * Debounced backup to a secondary location.
+ *
+ * Why:
+ * - electron-store already persists under userData, but a second copy reduces the
+ *   chance of data loss if the primary store gets corrupted.
+ * - Debounce prevents excessive disk writes during rapid UI interactions.
+ */
+let pendingBackupTimer: NodeJS.Timeout | null = null;
+let latestBackupPayload: AppState | null = null;
+
+const getBackupDir = (): string => {
+  // "Documents" is generally user-visible and works well on Windows/macOS/Linux.
+  // Using path.join keeps Windows pathing safe.
+  return path.join(app.getPath('documents'), 'NeoQueue Backups');
+};
+
+const serializeAppState = (data: AppState): string =>
+  JSON.stringify(
+    data,
+    (_key, value) => (value instanceof Date ? value.toISOString() : value),
+    2
+  );
+
+const writeBackupNow = async (data: AppState): Promise<void> => {
+  try {
+    const backupDir = getBackupDir();
+    await fs.promises.mkdir(backupDir, { recursive: true });
+
+    // Keep a single "latest" backup to avoid unbounded growth.
+    const filePath = path.join(backupDir, 'backup-latest.json');
+    await fs.promises.writeFile(filePath, serializeAppState(data), { encoding: 'utf8' });
+  } catch (error) {
+    // Backups are best-effort and should never break the core save flow.
+    console.warn('Failed to write secondary backup:', error);
+  }
+};
+
+const scheduleSecondaryBackup = (data: AppState, debounceMs = 1500): void => {
+  latestBackupPayload = data;
+
+  if (pendingBackupTimer) clearTimeout(pendingBackupTimer);
+
+  pendingBackupTimer = setTimeout(() => {
+    pendingBackupTimer = null;
+    if (!latestBackupPayload) return;
+    void writeBackupNow(latestBackupPayload);
+  }, debounceMs);
+};
+
 // IPC Handlers for data persistence
 ipcMain.handle(IPC_CHANNELS.SAVE_DATA, async (_event, data: AppState) => {
   try {
     store.set('appState', data);
+
+    // Best-effort secondary backup. Never fail the main save if backup fails.
+    scheduleSecondaryBackup(data);
+
     return { success: true };
   } catch (error) {
     console.error('Failed to save data:', error);

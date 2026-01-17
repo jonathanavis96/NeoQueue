@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 13:40:29
+Last updated: 2026-01-17 13:43:11
 
 ## Current State
 
@@ -82,7 +82,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 - [x] **Task 16:** Data integrity “nice-to-have” (post-v1 unless needed)
   - [x] Export current state as JSON (download/save via Electron main process)
   - [x] Optional: export Markdown (manager-friendly) with Active + Discussed sections
-  - [ ] Optional: debounced backup to a secondary location (Windows-safe pathing)
+  - [x] Optional: debounced backup to a secondary location (Windows-safe pathing)
   - [ ] Optional: undo (single-step) if it can be implemented safely
 
 ### Low Priority (Bigger Spec Items / Future)
@@ -117,6 +117,10 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 **2026-01-17 (Build Iteration): Task 16 export JSON**
 - Added JSON export via Electron save dialog and IPC (`export-json`).
 - Exposed `window.electronAPI.exportJson` and added Help panel button.
+
+**2026-01-17 (Build Iteration): Task 16 debounced secondary backup**
+- Added best-effort, debounced writes of `AppState` to `Documents/NeoQueue Backups/backup-latest.json` on every successful save.
+- Uses Windows-safe path joining and never fails the primary save if backup fails.
 
 **2026-01-17 (Build Iteration): Task 16 export Markdown**
 - Added Markdown export via Electron save dialog and IPC (`export-markdown`).
