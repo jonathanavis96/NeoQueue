@@ -331,10 +331,10 @@ const App: React.FC = () => {
       
       {/* Keyboard shortcuts hint */}
       <div className="app-shortcuts-hint" aria-hidden="true">
-        <kbd>Ctrl</kbd>+<kbd>Z</kbd> Undo &nbsp;|&nbsp;
-        <kbd>Ctrl</kbd>+<kbd>N</kbd> New item &nbsp;|&nbsp;
-        <kbd>Ctrl</kbd>+<kbd>F</kbd> Search &nbsp;|&nbsp;
-        <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Q</kbd> Toggle window
+        <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>Z</kbd> Undo &nbsp;|&nbsp;
+        <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>N</kbd> New item &nbsp;|&nbsp;
+        <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>F</kbd> Search &nbsp;|&nbsp;
+        <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>Shift</kbd>+<kbd>Q</kbd> Toggle window
       </div>
     </div>
   );

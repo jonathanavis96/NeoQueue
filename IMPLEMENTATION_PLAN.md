@@ -67,7 +67,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - Add export variants: Active-only / Discussed-only (date range optional).
   - Keep existing Export JSON/Markdown buttons as “All data”.
 
-- [ ] **Task 23:** Improve first-run/onboarding copy
+- [x] **Task 23:** Improve first-run/onboarding copy
   - Tighten Help panel text + ensure it stays accurate as shortcuts/settings evolve.
   - Consider adding a small “Settings” section (close-to-tray, always-on-top, scanlines).
 
@@ -94,6 +94,11 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 - [x] **Task 16:** Data integrity (undo + import)
 
 ## Discoveries & Notes
+
+**2026-01-17 (Build Iteration): Task 23 onboarding copy refresh**
+- Help panel copy updated to reflect current shortcuts (including Ctrl/Cmd+F search) and current settings surfaces.
+- Added a small “Settings (quick)” section (Always-on-top, Close-to-tray, Scanlines).
+- Footer shortcut hint now adapts Ctrl vs Cmd based on platform.
 
 **2026-01-17 (Build Iteration): Task 22 export scoping**
 - Added scoped export variants: Active-only and Discussed-only for both JSON and Markdown.

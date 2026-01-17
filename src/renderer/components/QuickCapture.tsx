@@ -77,7 +77,7 @@ export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ on
       />
       <span className={`quick-capture-cursor ${text ? 'active' : ''}`} aria-hidden="true">_</span>
       <span id="quick-capture-hint" className="visually-hidden">
-        Press Enter to add, Escape to clear. Use Ctrl+N to focus this input.
+        Press Enter to add, Escape to clear. Use Ctrl/Cmd+N to focus this input.
       </span>
     </form>
   );

@@ -109,29 +109,37 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
         </div>
 
         <p id="help-panel-desc" className="help-panel-desc">
-          Capture discussion points fast, add follow-ups, then mark items discussed.
+          NeoQueue is a lightweight queue for 1:1s: capture fast, add follow-ups, then mark items Discussed.
         </p>
 
         <div className="help-panel-body">
           <h3 className="help-panel-section-title">Core flow</h3>
           <ul className="help-panel-list">
             <li><strong>Add item:</strong> type and press <kbd>{keyLabel.enter}</kbd></li>
-            <li><strong>Copy:</strong> click the copy button on an item (or right-click the item to copy + start a follow-up)</li>
-            <li><strong>Follow-ups:</strong> expand an item and add a follow-up</li>
+            <li><strong>Copy:</strong> click Copy on an item (or right-click the item to copy + start a follow-up)</li>
+            <li><strong>Follow-ups:</strong> expand an item and add a follow-up note</li>
             <li><strong>Discussed:</strong> mark an item complete to move it to “Discussed”</li>
           </ul>
 
           <h3 className="help-panel-section-title">Keyboard shortcuts</h3>
           <ul className="help-panel-list">
-            <li><kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.n}</kbd> Focus “New item” input</li>
-            <li><kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.z}</kbd> Undo last action</li>
+            <li><kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.n}</kbd> Focus “New item”</li>
+            <li><kbd>{keyLabel.ctrl}</kbd>+<kbd>F</kbd> Search</li>
+            <li><kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.z}</kbd> Undo</li>
             <li>
-              <kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.shift}</kbd>+<kbd>{keyLabel.n}</kbd> Focus “New item” input (global)
+              <kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.shift}</kbd>+<kbd>{keyLabel.n}</kbd> Show NeoQueue + focus input (global)
             </li>
             <li>
               <kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.shift}</kbd>+<kbd>{keyLabel.q}</kbd> Toggle window (global)
             </li>
-            <li><kbd>{keyLabel.esc}</kbd> Clear input / close this panel</li>
+            <li><kbd>{keyLabel.esc}</kbd> Clear search / close this panel</li>
+          </ul>
+
+          <h3 className="help-panel-section-title">Settings (quick)</h3>
+          <ul className="help-panel-list">
+            <li><strong>Always on top:</strong> use the “TOP / PIN” button in the header (also available in the tray menu)</li>
+            <li><strong>Close to tray:</strong> enable in the tray menu to hide NeoQueue when you click the window close button</li>
+            <li><strong>Scanlines / CRT overlay:</strong> toggle below (purely visual)</li>
           </ul>
 
           <h3 className="help-panel-section-title">System tray</h3>
