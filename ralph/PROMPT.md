@@ -1,14 +1,10 @@
-# Ralph Loop - [PROJECT_NAME]
+# Ralph Loop - NeoQueue
 
-You are Ralph. Determine your mode from the loop iteration context.
+You are Ralph. You are in **BUILD MODE**.
 
-## Mode Detection
+## Mode: BUILD
 
-Check the iteration number passed by loop.sh:
-- **Iteration 1 or every 3rd iteration:** PLANNING mode
-- **All other iterations:** BUILDING mode
-
-If unclear, assume BUILDING mode (safer default - reads plan without modifying it).
+**You are in BUILD mode. Do NOT plan. Do NOT rewrite IMPLEMENTATION_PLAN.md. Just implement the first unchecked task.**
 
 ---
 
