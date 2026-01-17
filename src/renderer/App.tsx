@@ -1,6 +1,6 @@
 import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import './styles/App.css';
-import { useQueueData, useKeyboardShortcuts } from './hooks';
+import { useQueueData, useKeyboardShortcuts, useUiEffects } from './hooks';
 import { QuickCapture, SearchBox, QueueItemList, HelpPanel } from './components';
 import type { QuickCaptureRef } from './components/QuickCapture';
 import type { SearchBoxRef } from './components/SearchBox';
@@ -8,6 +8,7 @@ import type { SearchBoxRef } from './components/SearchBox';
 const HELP_DISMISSED_KEY = 'neoqueue.help.dismissed';
 
 const App: React.FC = () => {
+  const { scanlinesEnabled, setScanlinesEnabled, pulseAction, triggerPulse } = useUiEffects();
   const {
     items,
     isLoading,
@@ -79,8 +80,18 @@ const App: React.FC = () => {
 
   const hasActiveSearch = normalizedQuery.length > 0;
 
+  const addItemWithFx = useCallback(async (text: string) => {
+    triggerPulse('add');
+    await addItem(text);
+  }, [addItem, triggerPulse]);
+
   return (
-    <div className="app" role="application" aria-label="NeoQueue - Discussion Tracker">
+    <div
+      className={`app ${scanlinesEnabled ? 'scanlines-enabled' : ''} ${pulseAction ? 'fx-pulse' : ''}`}
+      data-pulse-action={pulseAction || undefined}
+      role="application"
+      aria-label="NeoQueue - Discussion Tracker"
+    >
       <header className="app-header">
         <div className="app-header-row">
           <div>
@@ -118,10 +129,12 @@ const App: React.FC = () => {
           }
           setIsHelpOpen(false);
         }}
+        scanlinesEnabled={scanlinesEnabled}
+        onToggleScanlines={setScanlinesEnabled}
       />
 
       <main className="app-main" role="main">
-        <QuickCapture ref={quickCaptureRef} onAdd={addItem} disabled={isLoading} />
+        <QuickCapture ref={quickCaptureRef} onAdd={addItemWithFx} disabled={isLoading} />
         
         {error && (
           <div className="app-error">

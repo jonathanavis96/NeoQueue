@@ -14,12 +14,16 @@ interface HelpPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onDismissForever: () => void;
+  scanlinesEnabled: boolean;
+  onToggleScanlines: (enabled: boolean) => void;
 }
 
 export const HelpPanel: React.FC<HelpPanelProps> = ({
   isOpen,
   onClose,
   onDismissForever,
+  scanlinesEnabled,
+  onToggleScanlines,
 }) => {
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -119,6 +123,21 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
             <li>NeoQueue keeps running in your system tray for quick access.</li>
             <li><strong>Double-click</strong> the tray icon to show NeoQueue.</li>
           </ul>
+
+          <h3 className="help-panel-section-title">UI effects</h3>
+          <div className="help-panel-effects">
+            <label className="help-panel-toggle">
+              <input
+                type="checkbox"
+                checked={scanlinesEnabled}
+                onChange={(e) => onToggleScanlines(e.target.checked)}
+              />
+              <span>Scanlines / CRT overlay</span>
+            </label>
+            <p className="help-panel-effects-hint">
+              Subtle overlay for Matrix vibes. Default is off.
+            </p>
+          </div>
 
           <div className="help-panel-actions">
             <button type="button" className="help-panel-secondary" onClick={onDismissForever}>

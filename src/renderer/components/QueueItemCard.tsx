@@ -5,6 +5,7 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { QueueItem } from '../../shared/types';
+import { useUiEffects } from '../hooks';
 import './QueueItemCard.css';
 
 interface QueueItemCardProps {
@@ -37,6 +38,8 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
   onDelete,
   onAddFollowUp,
 }) => {
+  const { triggerPulse } = useUiEffects();
+
   const [isCopied, setIsCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -47,16 +50,18 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(item.text);
+      triggerPulse('copy');
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 1500);
     } catch (err) {
       console.error('Failed to copy:', err);
     }
-  }, [item.text]);
+  }, [item.text, triggerPulse]);
 
   const handleToggleComplete = useCallback(async () => {
+    triggerPulse(item.isCompleted ? 'restore' : 'toggleComplete');
     await onToggleComplete(item.id);
-  }, [item.id, onToggleComplete]);
+  }, [item.id, item.isCompleted, onToggleComplete, triggerPulse]);
 
   const handleDelete = useCallback(async () => {
     if (isDeleting) return;

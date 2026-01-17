@@ -5,6 +5,63 @@
   height: 100%;
   width: 100%;
   background-color: var(--matrix-black);
+  position: relative;
+  isolation: isolate; /* keep overlays contained */
+}
+
+/* Scanline / CRT overlay (default off) */
+.app.scanlines-enabled::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0.18;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 255, 0, 0.04) 0px,
+      rgba(0, 255, 0, 0.04) 1px,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(0, 0, 0, 0) 4px
+    );
+  mix-blend-mode: screen;
+}
+
+.app.scanlines-enabled::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  opacity: 0.10;
+  background: radial-gradient(circle at 50% 10%, rgba(0, 255, 0, 0.16), rgba(0, 0, 0, 0) 55%);
+}
+
+/* Pulse/glitch on key actions (kept short and safe) */
+@keyframes fx-pulse {
+  0% { filter: none; }
+  45% { filter: saturate(1.15) drop-shadow(0 0 6px rgba(0, 255, 0, 0.25)); }
+  100% { filter: none; }
+}
+
+@keyframes fx-glitch {
+  0% { transform: translate3d(0, 0, 0); text-shadow: none; }
+  35% { transform: translate3d(0.5px, -0.5px, 0); text-shadow: 0 0 10px rgba(0, 255, 0, 0.35); }
+  70% { transform: translate3d(-0.5px, 0.5px, 0); text-shadow: 0 0 6px rgba(0, 255, 0, 0.25); }
+  100% { transform: translate3d(0, 0, 0); text-shadow: none; }
+}
+
+.app.fx-pulse .app-title,
+.app.fx-pulse .app-main {
+  animation: fx-pulse 280ms ease-out;
+}
+
+.app.fx-pulse[data-pulse-action='copy'] .app-main,
+.app.fx-pulse[data-pulse-action='add'] .app-title,
+.app.fx-pulse[data-pulse-action='toggleComplete'] .app-main,
+.app.fx-pulse[data-pulse-action='restore'] .app-main {
+  animation: fx-glitch 240ms ease-out;
 }
 
 .app-header {

@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 13:18:15
+Last updated: 2026-01-17 13:29:55
 
 ## Current State
 
@@ -67,15 +67,23 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - Optional: persist selected tab (localStorage) and restore on startup.
   - Ensure keyboard flow remains solid (Tab order, shortcuts still work).
 
-- [ ] **Task 14:** Matrix polish effects (tasteful)
-  - Add subtle scanline/CRT overlay (toggleable; default off)
-  - Add short glitch animation on: copy, add item, complete
-  - Avoid distraction; keep 60fps.
+- [x] **Task 14:** Matrix polish effects (tasteful)
+  - Add a subtle scanline/CRT overlay implemented as a CSS pseudo-element over the app container.
+    - Default: **off**
+    - Persist: `localStorage` (`neoqueue.ui.effects.scanlines`)
+    - Provide an in-app toggle (likely in Help panel or header menu)
+  - Add a brief “glitch/pulse” animation on key actions:
+    - add item
+    - copy item
+    - mark discussed / restore
+  - Prefer CSS-only (transform/opacity/text-shadow) and keep it under ~300ms.
+  - Guardrails: no seizure-y flashing; keep 60fps; no layout thrash.
 
 - [ ] **Task 16:** Data integrity “nice-to-have” (post-v1 unless needed)
-  - Export JSON (and optionally Markdown)
-  - Optional debounced backup to a secondary location (Windows-safe pathing)
-  - Optional undo (even single-step) if it can be implemented safely
+  - Export current state as JSON (download/save via Electron main process)
+  - Optional: export Markdown (manager-friendly) with Active + Discussed sections
+  - Optional: debounced backup to a secondary location (Windows-safe pathing)
+  - Optional: undo (single-step) if it can be implemented safely
 
 ### Low Priority (Bigger Spec Items / Future)
 
@@ -84,15 +92,27 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - If keeping list: update THOUGHTS.md to reflect the chosen UX.
 
 - [ ] **Task 17:** Window behavior polish
-  - Close-to-tray option
-  - Remember window size/position
+  - Add a **close-to-tray** option (intercept window close event and hide instead)
+    - Persist setting (likely in `electron-store` or `localStorage` + IPC)
+  - Remember window size/position across restarts (`BrowserWindow.getBounds()` → persist → restore)
+  - Ensure behavior is sane on multi-monitor changes (fallback to centered default)
 
 ## Discoveries & Notes
 
 **2026-01-17 (Planning update):**
 - THOUGHTS.md includes several “aspirational” features (canvas, right-click flow, auto-backup/undo/export) that diverge from the current shipped UI. The current app is intentionally *list-first* and already satisfies many practical MVP goals.
-- Two-tab UI is low-risk and aligns well with THOUGHTS.md without committing to the canvas concept; it should be the next UX iteration.
+- Current codebase already has small Matrix touches (blinking cursor). **Scanline/CRT overlay** and **glitch/pulse animations** have now been added (Task 14).
+- Window behavior today:
+  - Global shortcut toggles window visibility (`CommandOrControl+Shift+Q` uses `mainWindow.hide()`)
+  - No close-to-tray intercept and no persisted window bounds yet.
+- Two-tab UI is low-risk and aligns well with THOUGHTS.md without committing to the canvas concept.
 - Data-integrity items (backup, undo, export) should be treated as post-v1 unless required; they add complexity and deserve careful design.
+
+**2026-01-17 (Build Iteration): Task 14 Matrix polish effects**
+- Added CSS scanline/CRT overlay (default off) via `.app.scanlines-enabled` pseudo-elements.
+- Added in-app toggle in Help panel; persists in `localStorage` (`neoqueue.ui.effects.scanlines`).
+- Added brief (<= 300ms) pulse/glitch CSS animations on key actions: add, copy, mark discussed, restore.
+- Implemented a small `UiEffectsProvider` context to coordinate action pulses.
 
 **2026-01-17 (Build Iteration): Task 13 two-tab UI**
 - Replaced the two-section list with tabs: **Queue** and **Discussed**.
