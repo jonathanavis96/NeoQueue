@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import './styles/App.css';
 import { useQueueData, useKeyboardShortcuts, useUiEffects, useExperimentalFlags } from './hooks';
-import { QuickCapture, SearchBox, QueueItemList, HelpPanel, TitleBar, CommandsDropdown, MatrixRainBackground } from './components';
+import { QuickCapture, SearchBox, QueueItemList, HelpPanel, TitleBar, CommandsDropdown, MatrixRainBackground, RainControl } from './components';
 import type { QuickCaptureRef } from './components/QuickCapture';
 import type { SearchBoxRef } from './components/SearchBox';
 
@@ -221,13 +221,19 @@ const App: React.FC = () => {
               </button>
               <span className="app-pin-hint">Win+Ctrl+T</span>
             </div>
+            <RainControl
+              enabled={matrixRainEnabled}
+              intensity={matrixRainIntensity}
+              onToggle={setMatrixRainEnabled}
+              onChangeIntensity={setMatrixRainIntensity}
+            />
             <button
               type="button"
               className="app-help-button"
               onClick={() => setIsHelpOpen(true)}
               aria-label="Open help"
             >
-              Help
+              ?
             </button>
           </div>
         </div>

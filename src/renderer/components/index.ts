@@ -11,3 +11,4 @@ export { AutocompletePopover } from './AutocompletePopover';
 export { TitleBar } from './TitleBar';
 export { CommandsDropdown } from './CommandsDropdown';
 export { MatrixRainBackground } from './MatrixRainBackground';
+export { RainControl } from './RainControl';

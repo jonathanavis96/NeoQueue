@@ -137,34 +137,14 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
             <li><strong>Add item:</strong> type and press <kbd>{keyLabel.enter}</kbd></li>
             <li><strong>Copy:</strong> click Copy on an item (or right-click the item to copy + start a follow-up)</li>
             <li><strong>Follow-ups:</strong> expand an item and add a follow-up note</li>
-            <li><strong>Discussed:</strong> mark an item complete to move it to “Discussed”</li>
+            <li><strong>Discussed:</strong> mark an item complete to move it to "Discussed"</li>
           </ul>
 
-          <h3 className="help-panel-section-title">Keyboard shortcuts</h3>
+          <h3 className="help-panel-section-title">Quick settings</h3>
           <ul className="help-panel-list">
-            <li><kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.n}</kbd> Focus “New item”</li>
-            <li><kbd>{keyLabel.ctrl}</kbd>+<kbd>F</kbd> Search</li>
-            <li><kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.z}</kbd> Undo</li>
-            <li>
-              <kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.shift}</kbd>+<kbd>{keyLabel.n}</kbd> Show NeoQueue + focus input (global)
-            </li>
-            <li>
-              <kbd>{keyLabel.ctrl}</kbd>+<kbd>{keyLabel.shift}</kbd>+<kbd>{keyLabel.q}</kbd> Toggle window (global)
-            </li>
-            <li><kbd>{keyLabel.esc}</kbd> Clear search / close this panel</li>
-          </ul>
-
-          <h3 className="help-panel-section-title">Settings (quick)</h3>
-          <ul className="help-panel-list">
-            <li><strong>Always on top:</strong> use the “TOP / PIN” button in the header (also available in the tray menu)</li>
-            <li><strong>Close to tray:</strong> enable in the tray menu to hide NeoQueue when you click the window close button</li>
-            <li><strong>Scanlines / CRT overlay:</strong> toggle below (purely visual)</li>
-          </ul>
-
-          <h3 className="help-panel-section-title">System tray</h3>
-          <ul className="help-panel-list">
-            <li>NeoQueue keeps running in your system tray for quick access.</li>
-            <li><strong>Double-click</strong> the tray icon to show NeoQueue.</li>
+            <li><strong>PIN button:</strong> visual reminder that you've pinned the window on top using <kbd>Win</kbd>+<kbd>Ctrl</kbd>+<kbd>T</kbd> (PowerToys). NeoQueue minimizes to the Windows taskbar.</li>
+            <li><strong>Rain button (☔):</strong> toggle Matrix rain background and adjust intensity</li>
+            <li><strong>Scanlines:</strong> CRT overlay effect (toggle below)</li>
           </ul>
 
           <h3 className="help-panel-section-title">Experimental features</h3>
