@@ -58,7 +58,7 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
 
 ### Medium Priority
 
-- [ ] **Task 29:** Date-range export (optional but requested in THOUGHTS.md)
+- [x] **Task 29:** Date-range export (optional but requested in THOUGHTS.md)
   - Add export option(s) to filter items by `createdAt` and/or `completedAt`.
   - Keep current All/Active/Discussed export flows unchanged.
   - Include validation for invalid/empty ranges.
@@ -87,6 +87,11 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
 **2026-01-17 (Build): Task 28 complete**
 - Updated *true empty* messaging to be Matrix-flavored (Queue + Discussed).
 - Kept existing “No Results” messaging for search-filtered empty states.
+
+**2026-01-17 (Build): Task 29 complete**
+- Added date-range export via Help panel (field: Created/Completed; From/To; JSON/Markdown).
+- Date parsing/validation: expects `YYYY-MM-DD`, inclusive end date, rejects invalid/empty range (from > to).
+- Existing scoped exports (All/Active/Discussed) remain unchanged.
 
 ---
 

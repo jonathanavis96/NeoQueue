@@ -24,6 +24,8 @@ const App: React.FC = () => {
     exportMarkdown,
     exportJsonScoped,
     exportMarkdownScoped,
+    exportJsonScopedDateRange,
+    exportMarkdownScopedDateRange,
     importJson,
     canUndo,
     undo,
@@ -314,6 +316,19 @@ const App: React.FC = () => {
         onExportDiscussedMarkdown={async () => {
           try {
             await exportMarkdownScoped('discussed');
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error(e);
+          }
+        }}
+        onExportByDateRange={async ({ format, field, from, to }) => {
+          try {
+            const range = { field, from, to } as const;
+            if (format === 'markdown') {
+              await exportMarkdownScopedDateRange('all', range);
+            } else {
+              await exportJsonScopedDateRange('all', range);
+            }
           } catch (e) {
             // eslint-disable-next-line no-console
             console.error(e);

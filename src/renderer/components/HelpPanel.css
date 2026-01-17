@@ -144,6 +144,52 @@
   opacity: 0.85;
 }
 
+.help-panel-date-export {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm);
+  border: 1px solid rgba(0, 255, 0, 0.18);
+  background: rgba(0, 255, 0, 0.02);
+  border-radius: var(--radius-md);
+}
+
+.help-panel-date-export-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+  align-items: end;
+  margin: var(--spacing-sm) 0;
+}
+
+.help-panel-date-export-label {
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--matrix-green-dim);
+}
+
+.help-panel-date-export-input,
+.help-panel-date-export-select {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--matrix-green-dark);
+  background: var(--matrix-black);
+  color: var(--matrix-green);
+}
+
+.help-panel-date-export-input:focus-visible,
+.help-panel-date-export-select:focus-visible {
+  outline: 2px solid var(--matrix-green);
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .help-panel-date-export-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .help-panel-primary,
 .help-panel-secondary {
   font-family: var(--font-mono);

@@ -3,7 +3,7 @@ import { migrateAppState } from '../shared/migrations';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
-import { AppState, IPC_CHANNELS } from '../shared/types';
+import { AppState, ExportOptions, IPC_CHANNELS } from '../shared/types';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 // `electron-squirrel-startup` is Windows-only; guard to avoid crashing on other platforms.
@@ -298,7 +298,7 @@ ipcMain.handle(IPC_CHANNELS.SET_ALWAYS_ON_TOP, async (_event, enabled: boolean) 
   }
 });
 
-ipcMain.handle(IPC_CHANNELS.EXPORT_JSON, async (_event, data: AppState, options?: { scope?: string }) => {
+ipcMain.handle(IPC_CHANNELS.EXPORT_JSON, async (_event, data: AppState, options?: ExportOptions) => {
   try {
     const scopeSuffix = options?.scope && options.scope !== 'all' ? `-${options.scope}` : '';
     const defaultFileName = `neoqueue-export${scopeSuffix}-${new Date().toISOString().slice(0, 10)}.json`;
@@ -389,7 +389,7 @@ const toMarkdown = (data: AppState): string => {
   return lines.join('\n');
 };
 
-ipcMain.handle(IPC_CHANNELS.EXPORT_MARKDOWN, async (_event, data: AppState, options?: { scope?: string }) => {
+ipcMain.handle(IPC_CHANNELS.EXPORT_MARKDOWN, async (_event, data: AppState, options?: ExportOptions) => {
   try {
     const scopeSuffix = options?.scope && options.scope !== 'all' ? `-${options.scope}` : '';
     const defaultFileName = `neoqueue-export${scopeSuffix}-${new Date().toISOString().slice(0, 10)}.md`;

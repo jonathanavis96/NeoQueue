@@ -50,8 +50,21 @@ export interface AppState {
  */
 export type ExportScope = 'all' | 'active' | 'discussed';
 
+export type ExportDateField = 'createdAt' | 'completedAt';
+
+export interface ExportDateRange {
+  /** Which date on each item the filter should apply to. */
+  field: ExportDateField;
+  /** Inclusive start date, in YYYY-MM-DD format. */
+  from?: string;
+  /** Inclusive end date, in YYYY-MM-DD format. */
+  to?: string;
+}
+
 export interface ExportOptions {
   scope?: ExportScope;
+  /** Optional date-range filter applied in the renderer before export. */
+  dateRange?: ExportDateRange;
 }
 
 /**

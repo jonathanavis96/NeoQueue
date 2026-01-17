@@ -7,7 +7,7 @@
  * - Keyboard accessible (Escape closes)
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './HelpPanel.css';
 
 interface HelpPanelProps {
@@ -20,6 +20,7 @@ interface HelpPanelProps {
   onExportMarkdown: () => void;
   onExportActiveMarkdown: () => void;
   onExportDiscussedMarkdown: () => void;
+  onExportByDateRange: (args: { format: 'json' | 'markdown'; field: 'createdAt' | 'completedAt'; from?: string; to?: string }) => void;
   onImportJson: () => void;
   scanlinesEnabled: boolean;
   onToggleScanlines: (enabled: boolean) => void;
@@ -35,10 +36,16 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
   onExportMarkdown,
   onExportActiveMarkdown,
   onExportDiscussedMarkdown,
+  onExportByDateRange,
   onImportJson,
   scanlinesEnabled,
   onToggleScanlines,
 }) => {
+  const [exportDateField, setExportDateField] = useState<'createdAt' | 'completedAt'>('createdAt');
+  const [exportFrom, setExportFrom] = useState('');
+  const [exportTo, setExportTo] = useState('');
+  const [exportFormat, setExportFormat] = useState<'json' | 'markdown'>('json');
+
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const isMac = useMemo(() => {
@@ -160,6 +167,74 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
             </label>
             <p className="help-panel-effects-hint">
               Subtle overlay for Matrix vibes. Default is off.
+            </p>
+          </div>
+
+          <div className="help-panel-date-export" role="group" aria-label="Date-range export">
+            <div className="help-panel-export-scopes-title">Date-range export</div>
+            <div className="help-panel-date-export-row">
+              <label className="help-panel-date-export-label">
+                <span>Field</span>
+                <select
+                  className="help-panel-date-export-select"
+                  value={exportDateField}
+                  onChange={(e) => setExportDateField(e.target.value === 'completedAt' ? 'completedAt' : 'createdAt')}
+                >
+                  <option value="createdAt">Created</option>
+                  <option value="completedAt">Completed</option>
+                </select>
+              </label>
+
+              <label className="help-panel-date-export-label">
+                <span>From</span>
+                <input
+                  className="help-panel-date-export-input"
+                  type="date"
+                  value={exportFrom}
+                  onChange={(e) => setExportFrom(e.target.value)}
+                  placeholder="YYYY-MM-DD"
+                />
+              </label>
+
+              <label className="help-panel-date-export-label">
+                <span>To</span>
+                <input
+                  className="help-panel-date-export-input"
+                  type="date"
+                  value={exportTo}
+                  onChange={(e) => setExportTo(e.target.value)}
+                  placeholder="YYYY-MM-DD"
+                />
+              </label>
+
+              <label className="help-panel-date-export-label">
+                <span>Format</span>
+                <select
+                  className="help-panel-date-export-select"
+                  value={exportFormat}
+                  onChange={(e) => setExportFormat(e.target.value === 'markdown' ? 'markdown' : 'json')}
+                >
+                  <option value="json">JSON</option>
+                  <option value="markdown">Markdown</option>
+                </select>
+              </label>
+            </div>
+            <button
+              type="button"
+              className="help-panel-secondary"
+              onClick={() => {
+                onExportByDateRange({
+                  format: exportFormat,
+                  field: exportDateField,
+                  from: exportFrom.trim() ? exportFrom.trim() : undefined,
+                  to: exportTo.trim() ? exportTo.trim() : undefined,
+                });
+              }}
+            >
+              Export by date range
+            </button>
+            <p className="help-panel-effects-hint">
+              Uses inclusive dates. Leave From/To blank to export everything that has that date.
             </p>
           </div>
 

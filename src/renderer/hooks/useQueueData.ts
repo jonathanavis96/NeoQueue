@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { QueueItem, AppState, ExportScope } from '../../shared/types';
+import { QueueItem, AppState, ExportScope, ExportDateRange, ExportOptions } from '../../shared/types';
 import { CURRENT_APP_STATE_VERSION } from '../../shared/migrations';
 import { extractLearnedTokens } from '../../shared/dictionary';
 
@@ -31,6 +31,10 @@ interface UseQueueDataResult {
   exportMarkdown: () => Promise<void>;
   exportJsonScoped: (scope: ExportScope) => Promise<void>;
   exportMarkdownScoped: (scope: ExportScope) => Promise<void>;
+  exportJsonDateRange: (dateRange: ExportDateRange) => Promise<void>;
+  exportMarkdownDateRange: (dateRange: ExportDateRange) => Promise<void>;
+  exportJsonScopedDateRange: (scope: ExportScope, dateRange: ExportDateRange) => Promise<void>;
+  exportMarkdownScopedDateRange: (scope: ExportScope, dateRange: ExportDateRange) => Promise<void>;
   importJson: () => Promise<void>;
 }
 
@@ -223,7 +227,41 @@ export const useQueueData = (): UseQueueDataResult => {
     }
   }, [items, saveData]);
 
-  const buildScopedAppState = useCallback((scope: ExportScope): AppState => {
+  const parseYyyyMmDd = useCallback((value: string): Date | null => {
+    const match = /^\d{4}-\d{2}-\d{2}$/.exec(value.trim());
+    if (!match) return null;
+
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }, []);
+
+  const applyDateRange = useCallback((sourceItems: QueueItem[], dateRange: ExportDateRange): QueueItem[] => {
+    const from = dateRange.from ? parseYyyyMmDd(dateRange.from) : null;
+    const to = dateRange.to ? parseYyyyMmDd(dateRange.to) : null;
+
+    if ((dateRange.from && !from) || (dateRange.to && !to)) {
+      throw new Error('Invalid date range: use YYYY-MM-DD');
+    }
+
+    if (from && to && from.getTime() > to.getTime()) {
+      throw new Error('Invalid date range: start date is after end date');
+    }
+
+    // Inclusive end date: treat as end-of-day.
+    const toInclusive = to ? new Date(to.getTime() + 24 * 60 * 60 * 1000 - 1) : null;
+
+    return sourceItems.filter((item) => {
+      const raw = (dateRange.field === 'createdAt' ? item.createdAt : item.completedAt) as Date | undefined;
+      if (!raw) return false;
+
+      const ts = raw.getTime();
+      if (from && ts < from.getTime()) return false;
+      if (toInclusive && ts > toInclusive.getTime()) return false;
+      return true;
+    });
+  }, [parseYyyyMmDd]);
+
+  const buildScopedAppState = useCallback((scope: ExportScope, dateRange?: ExportDateRange): AppState => {
     const scopeItems =
       scope === 'active'
         ? items.filter((i) => !i.isCompleted)
@@ -231,20 +269,46 @@ export const useQueueData = (): UseQueueDataResult => {
           ? items.filter((i) => i.isCompleted)
           : items;
 
-    return buildAppState(scopeItems);
-  }, [buildAppState, items]);
+    const finalItems = dateRange ? applyDateRange(scopeItems, dateRange) : scopeItems;
 
-  const exportJsonScoped = useCallback(async (scope: ExportScope) => {
-    try {
-      const response = await window.electronAPI.exportJson(buildScopedAppState(scope), { scope });
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to export JSON');
+    return buildAppState(finalItems);
+  }, [applyDateRange, buildAppState, items]);
+
+  const exportJsonScopedDateRange = useCallback(
+    async (scope: ExportScope, dateRange: ExportDateRange) => {
+      try {
+        const options: ExportOptions = { scope, dateRange };
+        const response = await window.electronAPI.exportJson(buildScopedAppState(scope, dateRange), options);
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to export JSON');
+        }
+      } catch (err) {
+        setError(String(err));
+        throw err;
       }
-    } catch (err) {
-      setError(String(err));
-      throw err;
-    }
-  }, [buildScopedAppState]);
+    },
+    [buildScopedAppState]
+  );
+
+  const exportJsonDateRange = useCallback(
+    async (dateRange: ExportDateRange) => exportJsonScopedDateRange('all', dateRange),
+    [exportJsonScopedDateRange]
+  );
+
+  const exportJsonScoped = useCallback(
+    async (scope: ExportScope) => {
+      try {
+        const response = await window.electronAPI.exportJson(buildScopedAppState(scope), { scope });
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to export JSON');
+        }
+      } catch (err) {
+        setError(String(err));
+        throw err;
+      }
+    },
+    [buildScopedAppState]
+  );
 
   const exportJson = useCallback(async () => {
     return exportJsonScoped('all');
@@ -270,17 +334,41 @@ export const useQueueData = (): UseQueueDataResult => {
     }
   }, [items, saveData, undoSnapshot]);
 
-  const exportMarkdownScoped = useCallback(async (scope: ExportScope) => {
-    try {
-      const response = await window.electronAPI.exportMarkdown(buildScopedAppState(scope), { scope });
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to export Markdown');
+  const exportMarkdownScopedDateRange = useCallback(
+    async (scope: ExportScope, dateRange: ExportDateRange) => {
+      try {
+        const options: ExportOptions = { scope, dateRange };
+        const response = await window.electronAPI.exportMarkdown(buildScopedAppState(scope, dateRange), options);
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to export Markdown');
+        }
+      } catch (err) {
+        setError(String(err));
+        throw err;
       }
-    } catch (err) {
-      setError(String(err));
-      throw err;
-    }
-  }, [buildScopedAppState]);
+    },
+    [buildScopedAppState]
+  );
+
+  const exportMarkdownDateRange = useCallback(
+    async (dateRange: ExportDateRange) => exportMarkdownScopedDateRange('all', dateRange),
+    [exportMarkdownScopedDateRange]
+  );
+
+  const exportMarkdownScoped = useCallback(
+    async (scope: ExportScope) => {
+      try {
+        const response = await window.electronAPI.exportMarkdown(buildScopedAppState(scope), { scope });
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to export Markdown');
+        }
+      } catch (err) {
+        setError(String(err));
+        throw err;
+      }
+    },
+    [buildScopedAppState]
+  );
 
   const exportMarkdown = useCallback(async () => {
     return exportMarkdownScoped('all');
@@ -332,6 +420,10 @@ export const useQueueData = (): UseQueueDataResult => {
     exportMarkdown,
     exportJsonScoped,
     exportMarkdownScoped,
+    exportJsonDateRange,
+    exportMarkdownDateRange,
+    exportJsonScopedDateRange,
+    exportMarkdownScopedDateRange,
     importJson,
   };
 };
