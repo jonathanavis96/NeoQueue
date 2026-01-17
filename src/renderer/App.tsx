@@ -1,8 +1,9 @@
-import React, { useRef, useCallback, useEffect, useState } from 'react';
+import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import './styles/App.css';
 import { useQueueData, useKeyboardShortcuts } from './hooks';
-import { QuickCapture, QueueItemList, HelpPanel } from './components';
+import { QuickCapture, SearchBox, QueueItemList, HelpPanel } from './components';
 import type { QuickCaptureRef } from './components/QuickCapture';
+import type { SearchBoxRef } from './components/SearchBox';
 
 const HELP_DISMISSED_KEY = 'neoqueue.help.dismissed';
 
@@ -18,9 +19,11 @@ const App: React.FC = () => {
   } = useQueueData();
 
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Ref to QuickCapture for programmatic focus
+  // Refs for programmatic focus
   const quickCaptureRef = useRef<QuickCaptureRef>(null);
+  const searchRef = useRef<SearchBoxRef>(null);
 
   // First-run onboarding/help
   useEffect(() => {
@@ -38,10 +41,43 @@ const App: React.FC = () => {
     quickCaptureRef.current?.focus();
   }, []);
 
+  const handleFindShortcut = useCallback(() => {
+    searchRef.current?.focus();
+  }, []);
+
+  const handleEscape = useCallback(() => {
+    // Prefer clearing search first (if active), otherwise no-op.
+    if (searchQuery.trim().length > 0) {
+      setSearchQuery('');
+      searchRef.current?.focus();
+    }
+  }, [searchQuery]);
+
   // Handle keyboard shortcuts (global from main process + local)
   useKeyboardShortcuts({
     onNewItem: handleNewItemShortcut,
+    onFind: handleFindShortcut,
+    onEscape: handleEscape,
   });
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  const filteredItems = useMemo(() => {
+    if (!normalizedQuery) return items;
+
+    return items.filter((item) => {
+      const itemText = item.text.toLowerCase();
+      if (itemText.includes(normalizedQuery)) return true;
+
+      const followUpText = item.followUps
+        .map((fu) => fu.text.toLowerCase())
+        .join(' ');
+
+      return followUpText.includes(normalizedQuery);
+    });
+  }, [items, normalizedQuery]);
+
+  const hasActiveSearch = normalizedQuery.length > 0;
 
   return (
     <div className="app" role="application" aria-label="NeoQueue - Discussion Tracker">
@@ -52,6 +88,13 @@ const App: React.FC = () => {
             <p className="app-subtitle">tracking discussion points</p>
           </div>
           <div className="app-header-actions">
+            <SearchBox
+              ref={searchRef}
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onClear={() => setSearchQuery('')}
+              disabled={isLoading}
+            />
             <button
               type="button"
               className="app-help-button"
@@ -87,7 +130,9 @@ const App: React.FC = () => {
         )}
         
         <QueueItemList
-          items={items}
+          items={filteredItems}
+          hasUnfilteredItems={items.length > 0}
+          hasActiveSearch={hasActiveSearch}
           onToggleComplete={toggleComplete}
           onDelete={deleteItem}
           onAddFollowUp={addFollowUp}
@@ -98,6 +143,7 @@ const App: React.FC = () => {
       {/* Keyboard shortcuts hint */}
       <div className="app-shortcuts-hint" aria-hidden="true">
         <kbd>Ctrl</kbd>+<kbd>N</kbd> New item &nbsp;|&nbsp;
+        <kbd>Ctrl</kbd>+<kbd>F</kbd> Search &nbsp;|&nbsp;
         <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Q</kbd> Toggle window
       </div>
     </div>

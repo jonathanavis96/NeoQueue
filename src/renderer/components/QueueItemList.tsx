@@ -9,6 +9,8 @@ import './QueueItemList.css';
 
 interface QueueItemListProps {
   items: QueueItem[];
+  hasUnfilteredItems?: boolean;
+  hasActiveSearch?: boolean;
   onToggleComplete: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onAddFollowUp: (itemId: string, text: string) => Promise<void>;
@@ -17,6 +19,8 @@ interface QueueItemListProps {
 
 export const QueueItemList: React.FC<QueueItemListProps> = ({
   items,
+  hasUnfilteredItems = false,
+  hasActiveSearch = false,
   onToggleComplete,
   onDelete,
   onAddFollowUp,
@@ -38,11 +42,16 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
   }
 
   if (items.length === 0) {
+    const title = hasUnfilteredItems && hasActiveSearch ? '[ No Results ]' : '[ Queue Empty ]';
+    const hint = hasUnfilteredItems && hasActiveSearch
+      ? 'Try a different search query (Esc clears)'
+      : 'Type above to add your first discussion point';
+
     return (
       <div className="queue-item-list">
         <div className="queue-list-empty">
-          <p className="empty-title">[ Queue Empty ]</p>
-          <p className="empty-hint">Type above to add your first discussion point</p>
+          <p className="empty-title">{title}</p>
+          <p className="empty-hint">{hint}</p>
         </div>
       </div>
     );

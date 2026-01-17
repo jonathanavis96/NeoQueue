@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 13:11:59
+Last updated: 2026-01-17 13:12:53
 
 ## Current State
 
@@ -55,7 +55,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 ### Medium Priority (Feature Alignment / UX)
 
-- [ ] **Task 12:** Add search/filter for items
+- [x] **Task 12:** Add search/filter for items
   - Add a search box (at least for Active; ideally both Active/Discussed)
   - Real-time filter by item text + follow-up text
   - Keep keyboard flow solid (Ctrl+F focuses search, Esc clears)
@@ -85,6 +85,10 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - Remember window size/position
 
 ## Discoveries & Notes
+
+**2026-01-17 (Build Iteration): Task 12 search/filter**
+- Added header search box to filter items by item text and follow-up text.
+- Added Ctrl/Cmd+F to focus search and Esc to clear active search.
 
 **2026-01-17 (Planning update):**
 - THOUGHTS.md includes several “aspirational” features that diverge from the current shipped UI (canvas, right-click flow, backup/undo/export). Current app is a *list-first* workflow and already satisfies many practical MVP goals.

@@ -7,11 +7,13 @@ import { useEffect, useCallback } from 'react';
 
 interface UseKeyboardShortcutsOptions {
   onNewItem?: () => void;
+  onFind?: () => void;
   onEscape?: () => void;
 }
 
 export const useKeyboardShortcuts = ({
   onNewItem,
+  onFind,
   onEscape,
 }: UseKeyboardShortcutsOptions): void => {
   // Handle global shortcuts from main process (via IPC)
@@ -31,13 +33,21 @@ export const useKeyboardShortcuts = ({
     if ((e.ctrlKey || e.metaKey) && e.key === 'n' && !e.shiftKey) {
       e.preventDefault();
       onNewItem?.();
+      return;
     }
-    
+
+    // Ctrl/Cmd + F: Focus search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      e.preventDefault();
+      onFind?.();
+      return;
+    }
+
     // Escape: Clear focus / close modals
     if (e.key === 'Escape') {
       onEscape?.();
     }
-  }, [onNewItem, onEscape]);
+  }, [onNewItem, onFind, onEscape]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
