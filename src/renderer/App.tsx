@@ -32,7 +32,7 @@ const App: React.FC = () => {
     <div className="app" role="application" aria-label="NeoQueue - Discussion Tracker">
       <header className="app-header">
         <h1 className="app-title">NeoQueue</h1>
-        <p className="app-subtitle">// tracking discussion points</p>
+        <p className="app-subtitle">tracking discussion points</p>
       </header>
       <main className="app-main" role="main">
         <QuickCapture ref={quickCaptureRef} onAdd={addItem} disabled={isLoading} />

@@ -53,7 +53,7 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
       {activeItems.length > 0 && (
         <section className="queue-section">
           <h2 className="queue-section-title">
-            // Active ({activeItems.length})
+            Active ({activeItems.length})
           </h2>
           <div className="queue-section-items">
             {activeItems.map((item) => (
@@ -72,7 +72,7 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
       {completedItems.length > 0 && (
         <section className="queue-section completed">
           <h2 className="queue-section-title">
-            // Discussed ({completedItems.length})
+            Discussed ({completedItems.length})
           </h2>
           <div className="queue-section-items">
             {completedItems.map((item) => (

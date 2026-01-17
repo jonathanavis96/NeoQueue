@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 12:59:30
+Last updated: 2026-01-17 13:00:40
 
 ## Current State
 
@@ -35,11 +35,11 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 ### High Priority (Next Build Iterations)
 
-- [ ] **Task 10:** Build & distribution readiness
+- [x] **Task 10:** Build & distribution readiness
   - [x] electron-builder base config present in `package.json` (mac/win/linux targets)
   - [x] Add real app icons (app + tray) and wire them into Electron + electron-builder config
   - [x] Validate `npm run package` produces working artifacts on at least one OS (sanity check: app launches, data persists)
-  - [ ] Decide on auto-updater (optional; depends on having a distribution channel)
+  - [x] Decide on auto-updater: **Defer for v1** (no distribution channel yet; revisit if publishing via GitHub Releases, S3, or an internal updater feed)
   - Target: Installable artifacts with correct branding/icons
 
 - [ ] **Task 11:** Documentation & onboarding
@@ -88,6 +88,10 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 - Fixed electron-builder entry mismatch by compiling main process during build (`build` now runs `build:electron`) and pointing `package.json#main` at the actual output `dist/main/main/main.js`.
 - Packaging now produces a Linux AppImage (`release/NeoQueue-1.0.0.AppImage`) and `release/linux-unpacked`.
 - Note: In WSL, running AppImage may fail due to missing `libfuse.so.2`; verified via `--appimage-extract` that `resources/app.asar` is present and contains the expected main entry.
+
+**2026-01-17 13:00 (Build Iteration):** Task 10 auto-updater decision:
+- **Defer auto-updates for v1**. We currently have no stable publishing channel/URL for update artifacts.
+- Revisit once we choose a channel (e.g., GitHub Releases + `electron-updater`, or an internal feed) and can sign builds appropriately (especially on macOS/Windows).
 
 **2026-01-17 12:44 (Build Iteration):** Task 9 complete - Keyboard shortcuts and accessibility:
 - Added global shortcuts via Electron's globalShortcut API (Ctrl+Shift+N, Ctrl+Shift+Q)
