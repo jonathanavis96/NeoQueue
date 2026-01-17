@@ -50,7 +50,31 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
 
 ## Prioritized Tasks
 
-**Status: All planned tasks complete. NeoQueue v1 is feature-complete and ready for packaging/distribution.**
+**Status: Security vulnerabilities identified - requires dependency updates before packaging.**
+
+### High Priority (Security)
+
+- [ ] **Task 35:** Update Electron to v35.7.5+ (fixes ASAR Integrity Bypass - GHSA-vmqv-hx8q-j7mg)
+  - Current: electron@28.1.0
+  - Target: electron@35.7.5+ (or latest stable)
+  - May require code changes for breaking API changes
+  - Test: app launches, IPC works, tray works, global shortcuts work
+
+- [ ] **Task 36:** Update Vite/esbuild (fixes dev server request vulnerability - GHSA-67mh-4wv8-2f99)
+  - Current: vite@5.0.10
+  - Target: vite@6.1.7+ or latest
+  - Check vite.config.ts compatibility
+  - Test: `npm run dev` works, hot reload works
+
+- [ ] **Task 37:** Update electron-builder and tar (fixes Arbitrary File Overwrite - GHSA-8qq5-rm4j-mr97)
+  - Current: electron-builder@24.9.1
+  - Target: latest stable
+  - Test: `npm run package` produces valid builds
+
+- [ ] **Task 38:** Final security audit and validation
+  - Run `npm audit` - should show 0 vulnerabilities
+  - Run full validation: type-check, lint, build, package
+  - Test packaged app on target platform
 
 ### Completed High Priority
 
