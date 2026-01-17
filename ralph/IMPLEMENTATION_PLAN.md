@@ -1,245 +1,96 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 17:30:00
+Last updated: 2026-01-17 17:02:15
 
 ## Current State
 
-**CRITICAL DISCOVERY: Project has NOT been implemented yet.**
+**App status:** NeoQueue v1 core is implemented and usable.
 
-**What exists today (verified 2026-01-17 17:30):**
-- Ralph loop management files only: AGENTS.md, IMPLEMENTATION_PLAN.md, NEURONS.md, PROMPT.md, RALPH.md, THOUGHTS.md, VALIDATION_CRITERIA.md, loop.sh, kb/ directory
-- **NO src/ directory**
-- **NO package.json**
-- **NO actual application code**
-- **NO dependencies installed**
-- **NO build configuration**
+**What exists today (verified in codebase):**
+- Electron main process + Vite/React renderer wired and working
+- Persistence via `electron-store` (IPC save/load) + renderer hook (`useQueueData`) with optimistic updates + rollback
+- Core queue workflow:
+  - Quick capture (Enter-to-add)
+  - One-click copy + right-click copy + auto-focus follow-up input
+  - Follow-ups (expand/collapse + inline add)
+  - Completion workflow with tabs (**Queue** / **Discussed**)
+  - Delete
+  - Single-step Undo (Ctrl/Cmd+Z)
+- Search/filter:
+  - Header search filters item text + follow-up text
+  - Ctrl/Cmd+F focuses search; Esc clears
+- Power-user ergonomics:
+  - Ctrl/Cmd+N focuses new-item input (renderer)
+  - Global shortcuts: Ctrl/Cmd+Shift+N (show + focus new item), Ctrl/Cmd+Shift+Q (toggle window)
+  - System tray menu + double-click to show window
+  - Close-to-tray option (persisted) + always-on-top (pin) toggle (persisted)
+  - Window bounds persistence + multi-monitor-safe restore
+- Data integrity / portability:
+  - Export JSON + Markdown via Electron save dialogs
+  - Export scoping: All / Active-only / Discussed-only
+  - Import JSON via Electron open dialog + overwrite confirmation
+  - Best-effort debounced secondary backup to `Documents/NeoQueue Backups/backup-latest.json`
+  - Best-effort migrations/normalization for older/partial AppState
+- UX polish:
+  - Matrix theme + optional scanline/CRT overlay (persisted)
+  - Brief pulse/glitch animations on key actions
+  - Lightweight in-app startup banner: `[ N items in your Queue / M Discussed ]`
+- Experimental prototypes (env-flag gated):
+  - Canvas view (click-to-create) behind `VITE_EXPERIMENTAL_CANVAS`
+  - Tab-autocomplete (learned dictionary + popover) behind `VITE_EXPERIMENTAL_AUTOCOMPLETE`
+  - Spellcheck/autocorrect behavior disabled in authoring inputs (QuickCapture / follow-ups / Canvas draft)
 
-**Previous plan status:** Incorrectly marked as complete. This was a documentation-only state without actual implementation.
-
-**What needs to be built:** A complete Electron + React + TypeScript desktop application from scratch according to THOUGHTS.md specifications.
+**Known spec divergence (intentional for v1):**
+- THOUGHTS.md began as a canvas-first design. v1 intentionally ships a **list-first** UX; Canvas remains optional/future.
+- THOUGHTS.md mentions a specific `/mnt/e/...` backup target. Current implementation uses a safer cross-platform default (`Documents/NeoQueue Backups/`).
 
 ## Goal
 
-Build NeoQueue from scratch: A Matrix-inspired Electron desktop app for tracking discussion points with your manager. Deliver a working MVP with fast capture, follow-ups, completion workflow, persistence, and Matrix theme.
+Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, completion, persistence, keyboard/tray workflow) and is ready to package/install. Secondary goal: selectively align THOUGHTS.md “nice-to-have” items without destabilizing core flows.
 
 ## Prioritized Tasks
 
-### Phase 1: Project Foundation (High Priority)
+**Status: Security vulnerabilities identified - requires dependency updates before packaging.**
 
-- [ ] **Task 1:** Initialize Electron + React + TypeScript project
-  - Create package.json with Electron, React, TypeScript, Vite dependencies
-  - Set up tsconfig.json for Electron + React
-  - Create basic directory structure: src/main/, src/renderer/, src/shared/
-  - Add npm scripts: dev, build, type-check, lint, package
-  - Validation: `npm install` succeeds, project structure matches AGENTS.md
+### High Priority (Security)
 
-- [ ] **Task 2:** Configure Vite for Electron
-  - Create vite.config.ts for renderer process bundling
-  - Configure separate build for main process
-  - Set up hot module replacement for development
-  - Validation: Vite can build renderer without errors
+- [ ] **Task 35:** Update Electron to v35.7.5+ (fixes ASAR Integrity Bypass - GHSA-vmqv-hx8q-j7mg)
+  - Current: electron@28.1.0
+  - Target: electron@35.7.5+ (or latest stable)
+  - May require code changes for breaking API changes
+  - Test: app launches, IPC works, tray works, global shortcuts work
 
-- [ ] **Task 3:** Create Electron main process entry point
-  - Create src/main/main.ts with basic BrowserWindow setup
-  - Configure window size, frame options
-  - Load renderer process (Vite dev server in dev, built files in prod)
-  - Validation: `npm run dev` launches empty Electron window
+- [ ] **Task 36:** Update Vite/esbuild (fixes dev server request vulnerability - GHSA-67mh-4wv8-2f99)
+  - Current: vite@5.0.10
+  - Target: vite@6.1.7+ or latest
+  - Check vite.config.ts compatibility
+  - Test: `npm run dev` works, hot reload works
 
-- [ ] **Task 4:** Create shared TypeScript types
-  - Define QueueItem interface (id, text, createdAt, completedAt, isCompleted, followUps)
-  - Define FollowUp interface (id, text, createdAt)
-  - Define AppState interface for persistence
-  - Define IPC channel constants
-  - Location: src/shared/types.ts
-  - Validation: Types compile without errors
+- [ ] **Task 37:** Update electron-builder and tar (fixes Arbitrary File Overwrite - GHSA-8qq5-rm4j-mr97)
+  - Current: electron-builder@24.9.1
+  - Target: latest stable
+  - Test: `npm run package` produces valid builds
 
-- [ ] **Task 5:** Set up React renderer entry point
-  - Create src/renderer/index.tsx with React root
-  - Create src/renderer/App.tsx as root component
-  - Create index.html for Electron to load
-  - Add basic "Hello NeoQueue" content
-  - Validation: React renders in Electron window
+- [ ] **Task 38:** Final security audit and validation
+  - Run `npm audit` - should show 0 vulnerabilities
+  - Run full validation: type-check, lint, build, package
+  - Test packaged app on target platform
 
-### Phase 2: Core Data & Persistence (High Priority)
+### Completed High Priority
 
-- [ ] **Task 6:** Implement IPC communication for persistence
-  - Install electron-store for main process storage
-  - Create preload script (src/main/preload.ts) with contextBridge
-  - Expose window.electronAPI for save/load operations
-  - Implement IPC handlers in main.ts for save-data, load-data
-  - Validation: Renderer can save/load data via IPC
+- [x] **Task 28:** Matrix-flavored empty states (Queue + Discussed) without harming "No Results" messaging
 
-- [ ] **Task 7:** Create useQueueData hook
-  - Location: src/renderer/hooks/useQueueData.ts
-  - Load persisted state on mount
-  - Implement addItem, toggleComplete, deleteItem, addFollowUp, updateItem
-  - Implement optimistic updates with rollback on save failure
-  - Validation: Hook manages state and persists via IPC
+### Completed Medium Priority
 
-### Phase 3: Matrix Theme & Base UI (High Priority)
+- [x] **Task 29:** Date-range export (optional but requested in THOUGHTS.md)
+- [x] **Task 30:** Make secondary backup location configurable (opt-in)
 
-- [ ] **Task 8:** Implement Matrix dark theme
-  - Create src/renderer/styles/theme.css with CSS variables
-  - Colors: Background #0a0a0a, Primary green #00ff00, Secondary #003300
-  - Font: Fira Code or Consolas monospace
-  - Apply theme to App.tsx
-  - Validation: App displays with Matrix theme (black bg, green text)
+### Completed Low Priority (future direction)
 
-- [ ] **Task 9:** Create QuickCapture component
-  - Location: src/renderer/components/QuickCapture.tsx
-  - Text input + Enter to add item
-  - Auto-focus on mount
-  - Expose focus() via forwardRef for shortcuts
-  - Clear input after successful add
-  - Validation: Can type and press Enter to add items
-
-- [ ] **Task 10:** Create QueueItemCard component
-  - Location: src/renderer/components/QueueItemCard.tsx
-  - Display item text, timestamp
-  - Copy button (copies text to clipboard)
-  - Complete checkbox (toggles completion)
-  - Delete button
-  - Expand/collapse follow-ups
-  - Validation: Items display with all interactive controls
-
-### Phase 4: Follow-ups & Threading (Medium Priority)
-
-- [ ] **Task 11:** Implement follow-up display
-  - Show follow-ups indented under parent item
-  - Add visual connector lines (CSS borders/pseudo-elements)
-  - Collapsible follow-up section
-  - Validation: Follow-ups display with visual hierarchy
-
-- [ ] **Task 12:** Add follow-up creation UI
-  - Add "Add Follow-up" button on each item
-  - Show inline input when adding follow-up
-  - Save follow-up with parent item reference
-  - Focus input automatically when opened
-  - Validation: Can add follow-ups to any item
-
-- [ ] **Task 13:** Implement right-click copy + auto follow-up
-  - Prevent default context menu on items
-  - On right-click: copy text + open follow-up input
-  - Show "Copied!" toast briefly
-  - Validation: Right-click copies and opens follow-up input
-
-### Phase 5: Two-Tab Workflow (Medium Priority)
-
-- [ ] **Task 14:** Create tab navigation component
-  - Location: src/renderer/components/TabBar.tsx
-  - Two tabs: "Queue" (active items) and "Discussed" (completed items)
-  - Persist active tab in state
-  - Validation: Can switch between tabs
-
-- [ ] **Task 15:** Create QueueItemList component
-  - Location: src/renderer/components/QueueItemList.tsx
-  - Filter items based on active tab (isCompleted true/false)
-  - Render list of QueueItemCard components
-  - Handle empty states
-  - Validation: Items display in correct tab based on completion status
-
-- [ ] **Task 16:** Implement completion workflow
-  - Marking item complete moves it to Discussed tab
-  - Show visual feedback (brief animation/glitch effect)
-  - Auto-switch to Discussed tab on completion (or stay in Queue)
-  - Validation: Completing item moves it to Discussed tab
-
-### Phase 6: Search & Keyboard Shortcuts (Medium Priority)
-
-- [ ] **Task 17:** Implement search/filter
-  - Add search input in header
-  - Filter items by text content (item + follow-ups)
-  - Real-time filtering as user types
-  - Clear search with Escape key
-  - Validation: Search filters items correctly
-
-- [ ] **Task 18:** Add renderer keyboard shortcuts
-  - Ctrl/Cmd+N: Focus quick capture input
-  - Ctrl/Cmd+F: Focus search box
-  - Ctrl/Cmd+Z: Undo last action
-  - Escape: Cancel/close inputs
-  - Validation: Shortcuts work as expected
-
-- [ ] **Task 19:** Implement global shortcuts in main process
-  - Ctrl/Cmd+Shift+N: Show window + focus input
-  - Ctrl/Cmd+Shift+Q: Toggle window visibility
-  - Register shortcuts in main.ts
-  - Send IPC events to renderer
-  - Validation: Global shortcuts work from any app
-
-### Phase 7: System Tray Integration (Low Priority)
-
-- [ ] **Task 20:** Implement system tray
-  - Create tray icon (build/tray.png placeholder)
-  - Add tray menu: Show/Hide, Quit
-  - Double-click tray to show window
-  - Validation: Tray icon appears, menu works
-
-- [ ] **Task 21:** Add minimize-to-tray option
-  - Persist close-to-tray preference
-  - On window close: minimize to tray if enabled
-  - Add setting toggle in tray menu
-  - Validation: Close button minimizes to tray when enabled
-
-### Phase 8: Window Persistence & Polish (Low Priority)
-
-- [ ] **Task 22:** Implement window state persistence
-  - Save window position and size on close
-  - Restore on next launch
-  - Handle multi-monitor scenarios (clamp to visible area)
-  - Validation: Window remembers position/size
-
-- [ ] **Task 23:** Add always-on-top toggle
-  - Pin button in window controls
-  - Persist pin state
-  - Validation: Window stays on top when pinned
-
-- [ ] **Task 24:** Add glitch effects
-  - Brief CSS animation on copy, complete, add item
-  - Use transform + clip-path for Matrix style
-  - Duration: 200-300ms, non-intrusive
-  - Validation: Effects trigger on actions, don't distract
-
-### Phase 9: Export & Advanced Features (Low Priority)
-
-- [ ] **Task 25:** Implement JSON export
-  - Use Electron save dialog
-  - Export full AppState
-  - Export scopes: All / Active only / Discussed only
-  - Validation: Exported JSON is valid and re-importable
-
-- [ ] **Task 26:** Implement Markdown export
-  - Format items with timestamps in Markdown
-  - Include follow-ups as nested lists
-  - Use Electron save dialog
-  - Validation: Exported Markdown is readable
-
-- [ ] **Task 27:** Implement JSON import
-  - Use Electron open dialog
-  - Validate imported data structure
-  - Show confirmation before overwriting current data
-  - Validation: Can import previously exported JSON
-
-### Phase 10: Documentation & Packaging (Low Priority)
-
-- [ ] **Task 28:** Create README.md
-  - Installation instructions
-  - Usage guide
-  - Keyboard shortcuts reference
-  - Development setup
-  - Validation: README covers all essential information
-
-- [ ] **Task 29:** Update NEURONS.md
-  - Map final codebase structure
-  - Document key files and data flows
-  - Add troubleshooting notes
-  - Validation: NEURONS.md accurately reflects codebase
-
-- [ ] **Task 30:** Configure electron-builder
-  - Create electron-builder.json
-  - Configure app icons (build/icon.png)
-  - Test packaging for target platform
-  - Validation: `npm run package` produces installable app
+- [x] **Task 31:** Persist experimental flags as user settings (not only env vars)
+- [x] **Task 32:** Canvas prototype v2 (layout persistence + basic drag)
+- [x] **Task 33:** Align search behavior with THOUGHTS.md (optional)
+- [x] **Task 34:** Inline edit of item text (optional)
 
 ## Discoveries & Notes
 
