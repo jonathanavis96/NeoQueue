@@ -84,7 +84,8 @@ const store = new Store<StoreSchema>({
   defaults: {
     appState: {
       items: [],
-      version: 1,
+      version: 2,
+      dictionary: { tokens: [] },
     },
     settings: {
       closeToTray: false,

@@ -5,6 +5,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { QueueItem, AppState, ExportScope } from '../../shared/types';
+import { CURRENT_APP_STATE_VERSION } from '../../shared/migrations';
+import { extractLearnedTokens } from '../../shared/dictionary';
 
 type UndoSnapshot = {
   items: QueueItem[];
@@ -86,7 +88,8 @@ export const useQueueData = (): UseQueueDataResult => {
   const buildAppState = useCallback((newItems: QueueItem[]): AppState => {
     return {
       items: newItems,
-      version: 1,
+      dictionary: { tokens: extractLearnedTokens(newItems) },
+      version: CURRENT_APP_STATE_VERSION,
     };
   }, []);
 

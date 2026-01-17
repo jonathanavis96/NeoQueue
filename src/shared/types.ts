@@ -27,9 +27,20 @@ export interface QueueItem {
 /**
  * Application state stored persistently
  */
+export interface LearnedDictionary {
+  /**
+   * Case-preserving tokens learned from existing content.
+   *
+   * Why: Provides a stable source for tab-autocomplete without needing a
+   * heavyweight editor/spellcheck pipeline.
+   */
+  tokens: string[];
+}
+
 export interface AppState {
   items: QueueItem[];
   version: number;
+  dictionary: LearnedDictionary;
 }
 
 /**

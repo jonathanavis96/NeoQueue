@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 15:14:48
+Last updated: 2026-01-17 15:16:25
 
 ## Current State
 
@@ -120,7 +120,7 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
   - **Accessibility:** suggestion UI should be announced without stealing focus. Prefer `aria-controls` + `role="listbox"` and `aria-activedescendant`, or an `aria-live="polite"` summary if we keep UI minimal.
   - **Non-goals:** fuzzy matching, spellcheck replacement, or suggestions inside SearchBox.
 
-- [ ] **Task 26.2:** Implement minimal learned dictionary (persistence)
+- [x] **Task 26.2:** Implement minimal learned dictionary (persistence)
   - Data: `string[]` unique (case-insensitive compare), size-limited (e.g., 500 entries).
   - Seed with a small built-in dev list (e.g., Electron, React, TypeScript, CI, PR, Git).
   - Learning rule: learn tokens from submitted item/follow-up text (ignore tokens < 3 chars; ignore pure numbers/punctuation).

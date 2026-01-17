@@ -9,7 +9,24 @@
 
 import type { AppState, QueueItem, FollowUp } from './types';
 
-export const CURRENT_APP_STATE_VERSION = 1;
+const migrateLearnedDictionary = (raw: unknown): AppState['dictionary'] => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { tokens: [] };
+  }
+
+  const tokensRaw = (raw as Record<string, unknown>).tokens;
+  if (!Array.isArray(tokensRaw)) {
+    return { tokens: [] };
+  }
+
+  const tokens = tokensRaw
+    .map((t) => (typeof t === 'string' ? t.trim() : ''))
+    .filter((t) => t.length > 0);
+
+  return { tokens };
+};
+
+export const CURRENT_APP_STATE_VERSION = 2;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -153,11 +170,14 @@ export const migrateAppState = (raw: unknown): AppState => {
     return item;
   });
 
+  const dictionary = migrateLearnedDictionary((asObject as Record<string, unknown>).dictionary);
+
   // Upgrade to current version.
   void fromVersion; // reserved for future stepwise migrations
 
   return {
     items: normalizedItems,
+    dictionary,
     version: CURRENT_APP_STATE_VERSION,
   };
 };
