@@ -80,10 +80,12 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
   }
 
   if (items.length === 0) {
-    const title = hasUnfilteredItems && hasActiveSearch ? '[ No Results ]' : '[ Queue Empty ]';
-    const hint = hasUnfilteredItems && hasActiveSearch
+    const isNoResults = hasUnfilteredItems && hasActiveSearch;
+
+    const title = isNoResults ? '[ No Results ]' : '[ The Queue Is Clear ]';
+    const hint = isNoResults
       ? 'Try a different search query (Esc clears)'
-      : 'Type above to add your first discussion point';
+      : 'There is no spoon. Type above to add a discussion point.';
 
     return (
       <div className="queue-item-list">
@@ -97,14 +99,16 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
 
   const tabEmptyTitle = (() => {
     if (hasActiveSearch) return selectedTab === 'queue' ? '[ No Results in Queue ]' : '[ No Results in Discussed ]';
-    return selectedTab === 'queue' ? '[ Queue Empty ]' : '[ Discussed Empty ]';
+
+    return selectedTab === 'queue' ? '[ The Queue Is Clear ]' : '[ Discussed: Empty ]';
   })();
 
   const tabEmptyHint = (() => {
     if (hasActiveSearch) return 'Try switching tabs or clearing search (Esc clears)';
+
     return selectedTab === 'queue'
-      ? 'Mark items discussed to move them to “Discussed”'
-      : 'Items you mark discussed will show up here';
+      ? 'There is no spoon. Add a new point above, or mark items discussed to move them here.'
+      : 'Items you mark discussed will show up here.';
   })();
 
   return (
