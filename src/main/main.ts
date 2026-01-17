@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, nativeImage, dialog, screen } from 'electron';
+import { migrateAppState } from '../shared/migrations';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
@@ -262,8 +263,14 @@ ipcMain.handle(IPC_CHANNELS.SAVE_DATA, async (_event, data: AppState) => {
 
 ipcMain.handle(IPC_CHANNELS.LOAD_DATA, async () => {
   try {
-    const appState = store.get('appState');
-    return { success: true, data: appState };
+    const raw = store.get('appState');
+
+    // Defensive migration: older store files (or corrupted data) shouldn't crash the app.
+    // If migration succeeds and produces a normalized shape, persist it back.
+    const migrated = migrateAppState(raw);
+    store.set('appState', migrated);
+
+    return { success: true, data: migrated };
   } catch (error) {
     console.error('Failed to load data:', error);
     return { success: false, error: String(error) };
@@ -407,81 +414,9 @@ ipcMain.handle(IPC_CHANNELS.EXPORT_MARKDOWN, async (_event, data: AppState, opti
 });
 
 const normalizeImportedAppState = (raw: unknown): AppState => {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error('Invalid import: expected a JSON object');
-  }
-
-  const candidate = raw as Partial<AppState> & { items?: unknown };
-  const itemsRaw = (candidate as { items?: unknown }).items;
-
-  if (!Array.isArray(itemsRaw)) {
-    throw new Error('Invalid import: missing "items" array');
-  }
-
-  const version = typeof candidate.version === 'number' ? candidate.version : 1;
-
-  const toDate = (value: unknown): Date => {
-    if (value instanceof Date) return value;
-    if (typeof value === 'string' && value.trim().length > 0) {
-      const parsed = new Date(value);
-      if (Number.isNaN(parsed.getTime())) throw new Error('Invalid date value in import');
-      return parsed;
-    }
-    if (typeof value === 'number') {
-      const parsed = new Date(value);
-      if (Number.isNaN(parsed.getTime())) throw new Error('Invalid date value in import');
-      return parsed;
-    }
-    throw new Error('Invalid date value in import');
-  };
-
-  const items = itemsRaw.map((itemRaw) => {
-    if (!itemRaw || typeof itemRaw !== 'object') {
-      throw new Error('Invalid import: item must be an object');
-    }
-
-    const item = itemRaw as Record<string, unknown>;
-
-    const id = String(item.id ?? '');
-    const text = String(item.text ?? '');
-    const isCompleted = Boolean(item.isCompleted);
-
-    if (!id.trim()) throw new Error('Invalid import: item missing id');
-    if (!text.trim()) throw new Error('Invalid import: item missing text');
-
-    const createdAt = toDate(item.createdAt);
-    const completedAt = item.completedAt == null ? undefined : toDate(item.completedAt);
-
-    const followUpsRaw = Array.isArray(item.followUps) ? item.followUps : [];
-    const followUps = followUpsRaw.map((fuRaw) => {
-      if (!fuRaw || typeof fuRaw !== 'object') {
-        throw new Error('Invalid import: follow-up must be an object');
-      }
-
-      const fu = fuRaw as Record<string, unknown>;
-      const fuId = String(fu.id ?? '');
-      const fuText = String(fu.text ?? '');
-      if (!fuId.trim()) throw new Error('Invalid import: follow-up missing id');
-      if (!fuText.trim()) throw new Error('Invalid import: follow-up missing text');
-
-      return {
-        id: fuId,
-        text: fuText,
-        createdAt: toDate(fu.createdAt),
-      };
-    });
-
-    return {
-      id,
-      text,
-      createdAt,
-      completedAt,
-      isCompleted,
-      followUps,
-    };
-  });
-
-  return { items, version };
+  // Import should be permissive: allow older exports to continue to work.
+  // This uses the same migration logic we apply for the persisted store.
+  return migrateAppState(raw);
 };
 
 ipcMain.handle(IPC_CHANNELS.IMPORT_JSON, async () => {

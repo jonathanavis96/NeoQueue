@@ -71,7 +71,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - Tighten Help panel text + ensure it stays accurate as shortcuts/settings evolve.
   - Consider adding a small “Settings” section (close-to-tray, always-on-top, scanlines).
 
-- [ ] **Task 24:** Hardening: add defensive migrations for `AppState.version`
+- [x] **Task 24:** Hardening: add defensive migrations for `AppState.version`
   - Ensure app can load older exported JSON cleanly as schema evolves.
 
 ### Low Priority (future direction)
@@ -94,6 +94,12 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 - [x] **Task 16:** Data integrity (undo + import)
 
 ## Discoveries & Notes
+
+**2026-01-17 (Build Iteration): Task 24 AppState migrations hardening**
+- Added shared `migrateAppState()` helper (`src/shared/migrations.ts`) to normalize legacy/partial state and coerce dates.
+- Main process now migrates+re-saves state on load and uses the same migration path for JSON import.
+- Renderer load path now tolerates missing `followUps` arrays.
+
 
 **2026-01-17 (Build Iteration): Task 23 onboarding copy refresh**
 - Help panel copy updated to reflect current shortcuts (including Ctrl/Cmd+F search) and current settings surfaces.

@@ -58,7 +58,7 @@ export const useQueueData = (): UseQueueDataResult => {
             ...item,
             createdAt: new Date(item.createdAt),
             completedAt: item.completedAt ? new Date(item.completedAt) : undefined,
-            followUps: item.followUps.map((fu) => ({
+            followUps: (item.followUps ?? []).map((fu) => ({
               ...fu,
               createdAt: new Date(fu.createdAt),
             })),
