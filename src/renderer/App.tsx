@@ -27,9 +27,13 @@ const App: React.FC = () => {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [isStartupBannerVisible, setIsStartupBannerVisible] = useState(false);
+  const [startupBannerText, setStartupBannerText] = useState('');
+
   // Refs for programmatic focus
   const quickCaptureRef = useRef<QuickCaptureRef>(null);
   const searchRef = useRef<SearchBoxRef>(null);
+  const hasShownStartupBannerRef = useRef(false);
 
   // First-run onboarding/help
   useEffect(() => {
@@ -41,6 +45,35 @@ const App: React.FC = () => {
       setIsHelpOpen(true);
     }
   }, []);
+
+  // Lightweight startup notification banner (in-app)
+  useEffect(() => {
+    if (isLoading) return;
+    if (hasShownStartupBannerRef.current) return;
+
+    const activeCount = items.reduce((acc, item) => (item.isCompleted ? acc : acc + 1), 0);
+    const discussedCount = items.length - activeCount;
+
+    // Show only when there is at least 1 active item.
+    if (activeCount <= 0) {
+      hasShownStartupBannerRef.current = true;
+      return;
+    }
+
+    const itemWord = activeCount === 1 ? 'item' : 'items';
+    const discussedSuffix = discussedCount > 0 ? ` / ${discussedCount} Discussed` : '';
+    setStartupBannerText(`[ ${activeCount} ${itemWord} in your Queue${discussedSuffix} ]`);
+    setIsStartupBannerVisible(true);
+    hasShownStartupBannerRef.current = true;
+
+    const timeoutId = window.setTimeout(() => {
+      setIsStartupBannerVisible(false);
+    }, 4500);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isLoading, items]);
 
   // Handler for new item shortcut - focus the input
   const handleNewItemShortcut = useCallback(() => {
@@ -187,6 +220,21 @@ const App: React.FC = () => {
 
       <main className="app-main" role="main">
         <QuickCapture ref={quickCaptureRef} onAdd={addItemWithFx} disabled={isLoading} />
+
+        {isStartupBannerVisible && (
+          <div className="startup-banner" role="status" aria-live="polite">
+            <span className="startup-banner-text">{startupBannerText}</span>
+            <button
+              type="button"
+              className="startup-banner-close"
+              onClick={() => setIsStartupBannerVisible(false)}
+              aria-label="Dismiss startup notification"
+              title="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        )}
         
         {error && (
           <div className="app-error">

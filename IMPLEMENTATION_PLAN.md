@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 14:17:45
+Last updated: 2026-01-17 14:12:28
 
 ## Current State
 
@@ -66,9 +66,21 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - Optional alternative to the canvas spec: add a context-menu/right-click action on an item to copy text and auto-open the follow-up input.
   - Keep existing one-click copy button.
 
-- [ ] **Task 19:** Empty states + lightweight notification text
-  - Add Matrix-flavored empty states for Queue/Discussed.
-  - Optional: show “N items in your Queue” on startup (in-app, not OS-level notifications).
+- [x] **Task 19:** Lightweight startup notification text (in-app)
+  - Goal: On app launch (after data loads), briefly show a Matrix-flavored in-app message like **“[ 7 items in your Queue ]”**.
+  - Non-goals: no OS-level notifications; no background/tray popups.
+  - Recommended UX (low risk):
+    - Render a small banner **inside the main content** (ideal placement: just below `QuickCapture` and above the error box / list).
+    - Show only when there is at least 1 active (non-discussed) item.
+    - Show once per session (do not persist; just a startup hint).
+    - Auto-dismiss after ~3–5 seconds and/or allow manual dismiss (✕).
+    - Optional: vary message if there are discussed items too (e.g. “7 in Queue / 3 Discussed”).
+  - Acceptance criteria:
+    - Banner appears only after initial load completes (`isLoading` false), and does not flicker while loading.
+    - Banner text uses existing Matrix styling conventions (monospace, green-on-dark) and is unobtrusive.
+    - No console errors; no impact on existing shortcuts/focus behaviors.
+  - Notes:
+    - Empty states are already implemented in `QueueItemList` (including “No Results” and per-tab empty states); this task is strictly the startup “pending count” hint.
 
 ### Low Priority
 
@@ -93,6 +105,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 **2026-01-17 (Planning update):**
 - THOUGHTS.md “Success Metrics” emphasize right-click copy+follow-up and a canvas UI; v1 intentionally ships a **list-first** UX. Task 18 is the lowest-risk way to approximate the right-click ergonomics without a full canvas rewrite.
+- Task 19 note: Matrix-flavored empty states are already present in `src/renderer/components/QueueItemList.tsx` + `.queue-list-empty` styles. The only remaining scope is the optional in-app startup “N items in your Queue” text.
 - Window code (`src/main/main.ts`) currently:
   - Creates the window with fixed defaults (800x600) and no bounds persistence.
   - Implements close-to-tray by intercepting `BrowserWindow#close` when a tray exists and the setting is enabled.
@@ -117,6 +130,11 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 - Intercepts window close to hide to tray when enabled (and a tray exists).
 - Added tray context menu checkbox to toggle close-to-tray.
 - Ensures real quit still works by setting an `isQuitting` guard via `app.on('before-quit')`.
+
+**2026-01-17 (Build Iteration): Task 19 startup notification banner**
+- Added a lightweight in-app banner just below QuickCapture showing: `[ N items in your Queue / M Discussed ]`.
+- Shows only once per session, only after initial load completes, and only when there is at least 1 active item.
+- Auto-dismisses after ~4.5s; includes a manual dismiss (×) control.
 
 **2026-01-17 (Build Iteration): Task 18 right-click copy + follow-up ergonomics**
 - Added `onContextMenu` handler on `QueueItemCard` to copy item text, expand follow-ups, and focus the follow-up input.

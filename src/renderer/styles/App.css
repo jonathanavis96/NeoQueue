@@ -125,6 +125,52 @@
   overflow-y: auto;
 }
 
+/* Lightweight startup notification banner (in-app, non-persistent) */
+.startup-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: 10px 12px;
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  border: 1px solid var(--matrix-green-dark);
+  border-radius: var(--radius-md);
+  background: rgba(0, 16, 0, 0.55);
+  color: var(--matrix-green);
+  box-shadow: 0 0 14px rgba(0, 255, 0, 0.08);
+}
+
+.startup-banner-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  opacity: 0.95;
+}
+
+.startup-banner-close {
+  appearance: none;
+  border: 1px solid var(--matrix-green-dark);
+  background: transparent;
+  color: var(--matrix-green);
+  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  line-height: 20px;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.startup-banner-close:hover {
+  border-color: var(--matrix-green-dim);
+  opacity: 1;
+}
+
+.startup-banner-close:focus-visible {
+  outline: 2px solid var(--matrix-green);
+  outline-offset: 2px;
+}
+
 .matrix-text {
   color: var(--matrix-green);
   margin-bottom: var(--spacing-sm);
