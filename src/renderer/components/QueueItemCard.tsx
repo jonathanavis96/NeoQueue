@@ -3,13 +3,17 @@
  * and expandable follow-up threading
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useId } from 'react';
 import { QueueItem } from '../../shared/types';
-import { useUiEffects } from '../hooks';
+import { useAutocomplete, useUiEffects } from '../hooks';
+import { experimentalFlags } from '../experimentalFlags';
+import { AutocompletePopover } from './AutocompletePopover';
 import './QueueItemCard.css';
 
 interface QueueItemCardProps {
   item: QueueItem;
+  /** Learned dictionary tokens for autocomplete (case-preserving). */
+  dictionary: readonly string[];
   onToggleComplete: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onAddFollowUp: (itemId: string, text: string) => Promise<void>;
@@ -34,6 +38,7 @@ const formatRelativeTime = (date: Date): string => {
 
 export const QueueItemCard: React.FC<QueueItemCardProps> = ({
   item,
+  dictionary,
   onToggleComplete,
   onDelete,
   onAddFollowUp,
@@ -44,8 +49,22 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [followUpText, setFollowUpText] = useState('');
+  const [followUpCursor, setFollowUpCursor] = useState(0);
   const [isAddingFollowUp, setIsAddingFollowUp] = useState(false);
   const followUpInputRef = useRef<HTMLInputElement>(null);
+
+  const followUpPopoverId = useId();
+
+  const { state: acState, handleKeyDown: handleAutocompleteKeyDown } = useAutocomplete({
+    value: followUpText,
+    cursor: followUpCursor,
+    dictionary,
+    enabled: experimentalFlags.autocomplete,
+  });
+
+  const activeDescendantId = acState.isOpen
+    ? `${followUpPopoverId}-opt-${Math.max(0, Math.min(acState.selectedIndex, acState.suggestions.length - 1))}`
+    : undefined;
 
   const handleCopy = useCallback(async () => {
     try {
@@ -77,6 +96,13 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
     setIsExpanded((prev) => !prev);
   }, []);
 
+  const syncCursorFromDom = useCallback(() => {
+    const el = followUpInputRef.current;
+    if (!el) return;
+    const next = el.selectionStart ?? el.value.length;
+    setFollowUpCursor(next);
+  }, []);
+
   const handleRightClick = useCallback(async (e: React.MouseEvent) => {
     // "Right-click copy + follow-up" ergonomics:
     // - Copy the item text
@@ -94,8 +120,9 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
     // Wait a tick so the input exists in the DOM.
     window.setTimeout(() => {
       followUpInputRef.current?.focus();
+      syncCursorFromDom();
     }, 0);
-  }, [handleCopy]);
+  }, [handleCopy, syncCursorFromDom]);
 
   const handleFollowUpSubmit = useCallback(async () => {
     const trimmedText = followUpText.trim();
@@ -105,6 +132,7 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
     try {
       await onAddFollowUp(item.id, trimmedText);
       setFollowUpText('');
+      setFollowUpCursor(0);
       // Focus back on input for quick consecutive adds
       followUpInputRef.current?.focus();
     } finally {
@@ -113,14 +141,30 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
   }, [item.id, followUpText, isAddingFollowUp, onAddFollowUp]);
 
   const handleFollowUpKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    const result = handleAutocompleteKeyDown(e);
+    if (result.handled) {
+      if (result.accept) {
+        setFollowUpText(result.accept.nextValue);
+        const accept = result.accept;
+        window.requestAnimationFrame(() => {
+          if (!followUpInputRef.current) return;
+          followUpInputRef.current.setSelectionRange(accept.nextCursor, accept.nextCursor);
+          setFollowUpCursor(accept.nextCursor);
+        });
+      }
+      return;
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleFollowUpSubmit();
     } else if (e.key === 'Escape') {
       setFollowUpText('');
       followUpInputRef.current?.blur();
+      // Keep cursor state consistent.
+      window.requestAnimationFrame(syncCursorFromDom);
     }
-  }, [handleFollowUpSubmit]);
+  }, [handleAutocompleteKeyDown, handleFollowUpSubmit, syncCursorFromDom]);
 
   const hasFollowUps = item.followUps.length > 0;
 
@@ -210,17 +254,32 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
           {/* Add new follow-up input */}
           <div className="follow-up-input-container">
             <span className="follow-up-input-prefix">└─</span>
-            <input
-              ref={followUpInputRef}
-              type="text"
-              className="follow-up-input"
-              placeholder="Add follow-up note..."
-              value={followUpText}
-              onChange={(e) => setFollowUpText(e.target.value)}
-              onKeyDown={handleFollowUpKeyDown}
-              disabled={isAddingFollowUp}
-              aria-label="Add follow-up note"
-            />
+            <div className="follow-up-input-wrap">
+              <input
+                ref={followUpInputRef}
+                type="text"
+                className="follow-up-input"
+                placeholder="Add follow-up note..."
+                value={followUpText}
+                onChange={(e) => {
+                  setFollowUpText(e.target.value);
+                  syncCursorFromDom();
+                }}
+                onKeyDown={handleFollowUpKeyDown}
+                onSelect={syncCursorFromDom}
+                onKeyUp={syncCursorFromDom}
+                disabled={isAddingFollowUp}
+                aria-label="Add follow-up note"
+                aria-controls={acState.isOpen ? followUpPopoverId : undefined}
+                aria-activedescendant={activeDescendantId}
+              />
+              <AutocompletePopover
+                id={followUpPopoverId}
+                suggestions={acState.suggestions}
+                selectedIndex={acState.selectedIndex}
+                isOpen={acState.isOpen}
+              />
+            </div>
             <button
               className="follow-up-submit-btn"
               onClick={handleFollowUpSubmit}

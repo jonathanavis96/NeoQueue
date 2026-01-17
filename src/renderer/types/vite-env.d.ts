@@ -7,6 +7,13 @@ interface ImportMetaEnv {
    * Values treated as true: "true", "1", "yes".
    */
   readonly VITE_EXPERIMENTAL_CANVAS?: string;
+
+  /**
+   * Enables experimental tab-autocomplete suggestions.
+   *
+   * Values treated as true: "true", "1", "yes".
+   */
+  readonly VITE_EXPERIMENTAL_AUTOCOMPLETE?: string;
 }
 
 interface ImportMeta {

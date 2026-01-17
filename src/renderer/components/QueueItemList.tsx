@@ -13,6 +13,8 @@ const SELECTED_TAB_KEY = 'neoqueue.ui.selectedTab';
 
 interface QueueItemListProps {
   items: QueueItem[];
+  /** Learned dictionary tokens for autocomplete (case-preserving). */
+  dictionary: readonly string[];
   hasUnfilteredItems?: boolean;
   hasActiveSearch?: boolean;
   onToggleComplete: (id: string) => Promise<void>;
@@ -23,6 +25,7 @@ interface QueueItemListProps {
 
 export const QueueItemList: React.FC<QueueItemListProps> = ({
   items,
+  dictionary,
   hasUnfilteredItems = false,
   hasActiveSearch = false,
   onToggleComplete,
@@ -149,6 +152,7 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
               <QueueItemCard
                 key={item.id}
                 item={item}
+                dictionary={dictionary}
                 onToggleComplete={onToggleComplete}
                 onDelete={onDelete}
                 onAddFollowUp={onAddFollowUp}

@@ -10,6 +10,7 @@
 
 export type ExperimentalFlags = Readonly<{
   canvas: boolean;
+  autocomplete: boolean;
 }>;
 
 const parseBooleanEnv = (value: string | boolean | undefined): boolean => {
@@ -20,4 +21,5 @@ const parseBooleanEnv = (value: string | boolean | undefined): boolean => {
 
 export const experimentalFlags: ExperimentalFlags = Object.freeze({
   canvas: parseBooleanEnv(import.meta.env.VITE_EXPERIMENTAL_CANVAS),
+  autocomplete: parseBooleanEnv(import.meta.env.VITE_EXPERIMENTAL_AUTOCOMPLETE),
 });

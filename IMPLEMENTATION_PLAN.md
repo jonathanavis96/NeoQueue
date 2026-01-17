@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 15:20:05
+Last updated: 2026-01-17 15:28:16
 
 ## Current State
 
@@ -137,6 +137,22 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
   - Pick one UI: inline ghost text OR a small popover anchored under the input.
   - Must degrade gracefully: if suggestion UI fails, typing/submitting still works.
   - Ensure feature is gated (experimental flag or setting).
+
+- [x] **Task 26.4.1:** Integrate autocomplete popover into QuickCapture
+  - Done: `QuickCapture` uses `useAutocomplete` + `AutocompletePopover`.
+  - Gated behind `VITE_EXPERIMENTAL_AUTOCOMPLETE`.
+
+- [x] **Task 26.4.2:** Integrate autocomplete into follow-up input (QueueItemCard)
+  - Same key precedence rules as QuickCapture.
+  - Must not interfere with Enter-to-submit and Escape-to-clear.
+
+- [ ] **Task 26.4.3:** Integrate autocomplete into Canvas draft input (CanvasView)
+  - Only when Canvas is enabled.
+  - Ensure Esc still cancels draft when suggestions are not open.
+
+- [ ] **Task 26.4.4:** Autocomplete QA pass (keyboard + a11y)
+  - Verify Tab behavior: accepts suggestion only when open; otherwise focus traversal.
+  - Verify `aria-controls` + `aria-activedescendant` wiring is correct.
 
 - [ ] **Task 27:** Code-aware spellcheck/autocorrect tuning (THOUGHTS.md)
   - Reality check: Electron/Chromium spellcheck customization is non-trivial; keep scope pragmatic.

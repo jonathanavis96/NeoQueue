@@ -13,6 +13,7 @@ const App: React.FC = () => {
   const { scanlinesEnabled, setScanlinesEnabled, pulseAction, triggerPulse } = useUiEffects();
   const {
     items,
+    dictionaryTokens,
     isLoading,
     error,
     addItem,
@@ -332,7 +333,12 @@ const App: React.FC = () => {
 
       <main className="app-main" role="main">
         {activeView === 'list' ? (
-          <QuickCapture ref={quickCaptureRef} onAdd={addItemWithFx} disabled={isLoading} />
+          <QuickCapture
+            ref={quickCaptureRef}
+            onAdd={addItemWithFx}
+            dictionary={dictionaryTokens}
+            disabled={isLoading}
+          />
         ) : (
           <CanvasView ref={canvasRef} items={items} onAddItem={addItemWithFx} isLoading={isLoading} />
         )}
@@ -361,6 +367,7 @@ const App: React.FC = () => {
         {activeView === 'list' && (
           <QueueItemList
             items={filteredItems}
+            dictionary={dictionaryTokens}
             hasUnfilteredItems={items.length > 0}
             hasActiveSearch={hasActiveSearch}
             onToggleComplete={toggleComplete}

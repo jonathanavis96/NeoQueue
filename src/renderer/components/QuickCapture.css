@@ -23,8 +23,14 @@
   flex-shrink: 0;
 }
 
-.quick-capture-input {
+.quick-capture-input-wrap {
+  position: relative;
   flex: 1;
+  min-width: 0;
+}
+
+.quick-capture-input {
+  width: 100%;
   background: transparent;
   border: none;
   color: var(--matrix-green);

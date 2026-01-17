@@ -3,7 +3,7 @@
  * Provides load/save functionality via Electron IPC
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { QueueItem, AppState, ExportScope } from '../../shared/types';
 import { CURRENT_APP_STATE_VERSION } from '../../shared/migrations';
 import { extractLearnedTokens } from '../../shared/dictionary';
@@ -15,6 +15,8 @@ type UndoSnapshot = {
 
 interface UseQueueDataResult {
   items: QueueItem[];
+  /** Learned dictionary tokens derived from current items (case-preserving). */
+  dictionaryTokens: string[];
   isLoading: boolean;
   error: string | null;
   addItem: (text: string) => Promise<void>;
@@ -312,8 +314,11 @@ export const useQueueData = (): UseQueueDataResult => {
     }
   }, []);
 
+  const dictionaryTokens = useMemo(() => extractLearnedTokens(items), [items]);
+
   return { 
     items,
+    dictionaryTokens,
     isLoading,
     error,
     addItem,

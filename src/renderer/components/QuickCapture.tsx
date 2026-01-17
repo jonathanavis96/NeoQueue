@@ -4,11 +4,23 @@
  * Supports ref forwarding for programmatic focus via keyboard shortcuts
  */
 
-import React, { useState, useCallback, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  useImperativeHandle,
+  forwardRef,
+  useId,
+} from 'react';
+import { useAutocomplete } from '../hooks';
+import { experimentalFlags } from '../experimentalFlags';
+import { AutocompletePopover } from './AutocompletePopover';
 import './QuickCapture.css';
 
 interface QuickCaptureProps {
   onAdd: (text: string) => Promise<void>;
+  dictionary: readonly string[];
   disabled?: boolean;
 }
 
@@ -17,10 +29,24 @@ export interface QuickCaptureRef {
   focus: () => void;
 }
 
-export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ onAdd, disabled = false }, ref) => {
+export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ onAdd, dictionary, disabled = false }, ref) => {
   const [text, setText] = useState('');
+  const [cursor, setCursor] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const popoverId = useId();
+
+  const { state: acState, handleKeyDown: handleAutocompleteKeyDown } = useAutocomplete({
+    value: text,
+    cursor,
+    dictionary,
+    enabled: experimentalFlags.autocomplete,
+  });
+
+  const activeDescendantId = acState.isOpen
+    ? `${popoverId}-opt-${Math.max(0, Math.min(acState.selectedIndex, acState.suggestions.length - 1))}`
+    : undefined;
 
   // Expose focus method via ref
   useImperativeHandle(ref, () => ({
@@ -51,30 +77,69 @@ export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ on
     }
   }, [text, onAdd, isSubmitting, disabled]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    // Escape clears the input
+  const syncCursorFromDom = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const next = el.selectionStart ?? el.value.length;
+    setCursor(next);
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    const result = handleAutocompleteKeyDown(e);
+    if (result.handled) {
+      if (result.accept) {
+        setText(result.accept.nextValue);
+        const accept = result.accept;
+        window.requestAnimationFrame(() => {
+          if (!inputRef.current) return;
+          inputRef.current.setSelectionRange(accept.nextCursor, accept.nextCursor);
+          setCursor(accept.nextCursor);
+        });
+      }
+      return;
+    }
+
+    // Escape clears the input (when autocomplete isn't currently open)
     if (e.key === 'Escape') {
       setText('');
-      inputRef.current?.focus();
+      window.requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        syncCursorFromDom();
+      });
     }
-  }, []);
+  }, [handleAutocompleteKeyDown, syncCursorFromDom]);
 
   return (
     <form className="quick-capture" onSubmit={handleSubmit} role="search" aria-label="Add new discussion item">
       <span className="quick-capture-prompt" aria-hidden="true">&gt;</span>
-      <input
-        ref={inputRef}
-        type="text"
-        className="quick-capture-input"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Type a discussion point and press Enter..."
-        disabled={isSubmitting || disabled}
-        autoFocus
-        aria-label="New discussion item"
-        aria-describedby="quick-capture-hint"
-      />
+      <div className="quick-capture-input-wrap">
+        <input
+          ref={inputRef}
+          type="text"
+          className="quick-capture-input"
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            syncCursorFromDom();
+          }}
+          onKeyDown={handleKeyDown}
+          onSelect={syncCursorFromDom}
+          onKeyUp={syncCursorFromDom}
+          placeholder="Type a discussion point and press Enter..."
+          disabled={isSubmitting || disabled}
+          autoFocus
+          aria-label="New discussion item"
+          aria-describedby="quick-capture-hint"
+          aria-controls={acState.isOpen ? popoverId : undefined}
+          aria-activedescendant={activeDescendantId}
+        />
+        <AutocompletePopover
+          id={popoverId}
+          suggestions={acState.suggestions}
+          selectedIndex={acState.selectedIndex}
+          isOpen={acState.isOpen}
+        />
+      </div>
       <span className={`quick-capture-cursor ${text ? 'active' : ''}`} aria-hidden="true">_</span>
       <span id="quick-capture-hint" className="visually-hidden">
         Press Enter to add, Escape to clear. Use Ctrl/Cmd+N to focus this input.
