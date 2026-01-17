@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 15:16:25
+Last updated: 2026-01-17 15:20:05
 
 ## Current State
 
@@ -128,7 +128,7 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
     - Prefer `electron-store` via IPC so it persists alongside other app state and benefits from backup/export/import.
     - Fallback: localStorage (renderer-only) if IPC is deferred.
 
-- [ ] **Task 26.3:** Implement autocomplete engine + hook (renderer)
+- [x] **Task 26.3:** Implement autocomplete engine + hook (renderer)
   - Pure function: `getSuggestions(prefix, dictionary, limit)`.
   - Hook: token detection + suggestion list + selected index + key handling (Tab/Shift+Tab/Esc).
   - Keep implementation UI-agnostic so multiple inputs can reuse it.
