@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 13:37:38
+Last updated: 2026-01-17 13:40:29
 
 ## Current State
 
@@ -81,7 +81,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 - [x] **Task 16:** Data integrity “nice-to-have” (post-v1 unless needed)
   - [x] Export current state as JSON (download/save via Electron main process)
-  - [ ] Optional: export Markdown (manager-friendly) with Active + Discussed sections
+  - [x] Optional: export Markdown (manager-friendly) with Active + Discussed sections
   - [ ] Optional: debounced backup to a secondary location (Windows-safe pathing)
   - [ ] Optional: undo (single-step) if it can be implemented safely
 
@@ -117,6 +117,11 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 **2026-01-17 (Build Iteration): Task 16 export JSON**
 - Added JSON export via Electron save dialog and IPC (`export-json`).
 - Exposed `window.electronAPI.exportJson` and added Help panel button.
+
+**2026-01-17 (Build Iteration): Task 16 export Markdown**
+- Added Markdown export via Electron save dialog and IPC (`export-markdown`).
+- Renderer exposes `window.electronAPI.exportMarkdown`; Help panel includes an "Export notes (Markdown)" button.
+- Markdown output includes Active + Discussed sections and follow-ups.
 
 **2026-01-17 (Build Iteration): Task 13 two-tab UI**
 - Replaced the two-section list with tabs: **Queue** and **Discussed**.

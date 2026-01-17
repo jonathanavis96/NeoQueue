@@ -24,6 +24,13 @@ interface ExportJsonResponse {
   error?: string;
 }
 
+interface ExportMarkdownResponse {
+  success: boolean;
+  canceled?: boolean;
+  filePath?: string;
+  error?: string;
+}
+
 // Callback type for shortcut events
 type ShortcutCallback = () => void;
 
@@ -45,6 +52,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   exportJson: (data: AppState): Promise<ExportJsonResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.EXPORT_JSON, data),
+
+  exportMarkdown: (data: AppState): Promise<ExportMarkdownResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.EXPORT_MARKDOWN, data),
   
   // Keyboard shortcut event listeners
   onNewItemShortcut: (callback: ShortcutCallback): (() => void) => {
@@ -70,6 +80,7 @@ declare global {
       loadData: () => Promise<LoadDataResponse>;
       getVersion: () => Promise<string>;
       exportJson: (data: AppState) => Promise<ExportJsonResponse>;
+      exportMarkdown: (data: AppState) => Promise<ExportMarkdownResponse>;
       onNewItemShortcut: (callback: ShortcutCallback) => () => void;
       onShowWindow: (callback: ShortcutCallback) => () => void;
     };

@@ -16,6 +16,7 @@ interface UseQueueDataResult {
   toggleComplete: (id: string) => Promise<void>;
   addFollowUp: (itemId: string, text: string) => Promise<void>;
   exportJson: () => Promise<void>;
+  exportMarkdown: () => Promise<void>;
 }
 
 // Generate a simple UUID (v4-like)
@@ -191,6 +192,18 @@ export const useQueueData = (): UseQueueDataResult => {
     }
   }, [buildAppState, items]);
 
+  const exportMarkdown = useCallback(async () => {
+    try {
+      const response = await window.electronAPI.exportMarkdown(buildAppState(items));
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to export Markdown');
+      }
+    } catch (err) {
+      setError(String(err));
+      throw err;
+    }
+  }, [buildAppState, items]);
+
   return {
     items,
     isLoading,
@@ -201,5 +214,6 @@ export const useQueueData = (): UseQueueDataResult => {
     toggleComplete,
     addFollowUp,
     exportJson,
+    exportMarkdown,
   };
 };

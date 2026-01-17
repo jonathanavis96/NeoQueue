@@ -18,6 +18,7 @@ const App: React.FC = () => {
     deleteItem,
     addFollowUp,
     exportJson,
+    exportMarkdown,
   } = useQueueData();
 
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -133,6 +134,16 @@ const App: React.FC = () => {
         onExportJson={async () => {
           try {
             await exportJson();
+          } catch (e) {
+            // Keep the help panel open; surface error in app error box.
+            // useQueueData already sets error on failure paths.
+            // eslint-disable-next-line no-console
+            console.error(e);
+          }
+        }}
+        onExportMarkdown={async () => {
+          try {
+            await exportMarkdown();
           } catch (e) {
             // Keep the help panel open; surface error in app error box.
             // useQueueData already sets error on failure paths.

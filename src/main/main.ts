@@ -108,6 +108,92 @@ ipcMain.handle(IPC_CHANNELS.EXPORT_JSON, async (_event, data: AppState) => {
   }
 });
 
+const escapeMarkdown = (value: string): string => {
+  // Avoid turning headings/lists/emphasis into markdown syntax unexpectedly.
+  // 1) escape backslashes, then 2) escape common markdown control chars.
+  return value.replace(/\\/g, '\\\\').replace(/([[[*_`\]])/g, '\\$1');
+};
+
+const formatDate = (date: Date): string => {
+  // Manager-friendly: YYYY-MM-DD
+  return date.toISOString().slice(0, 10);
+};
+
+const toMarkdown = (data: AppState): string => {
+  const active = data.items.filter((i) => !i.isCompleted);
+  const discussed = data.items.filter((i) => i.isCompleted);
+
+  const lines: string[] = [];
+  lines.push(`# NeoQueue Export`);
+  lines.push('');
+  lines.push(`Generated: ${formatDate(new Date())}`);
+  lines.push('');
+
+  const renderSection = (title: string, sectionItems: typeof data.items) => {
+    lines.push(`## ${title}`);
+    lines.push('');
+
+    if (sectionItems.length === 0) {
+      lines.push('_No items._');
+      lines.push('');
+      return;
+    }
+
+    sectionItems.forEach((item, idx) => {
+      const created = item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt);
+      const completed = item.completedAt
+        ? item.completedAt instanceof Date
+          ? item.completedAt
+          : new Date(item.completedAt)
+        : undefined;
+
+      const header = `${idx + 1}. ${escapeMarkdown(item.text)}`;
+      lines.push(header);
+      lines.push(`   - Created: ${formatDate(created)}`);
+      if (completed) lines.push(`   - Discussed: ${formatDate(completed)}`);
+
+      if (item.followUps?.length) {
+        lines.push('   - Follow-ups:');
+        item.followUps.forEach((fu) => {
+          const fuCreated = fu.createdAt instanceof Date ? fu.createdAt : new Date(fu.createdAt);
+          lines.push(`     - ${escapeMarkdown(fu.text)} _(${formatDate(fuCreated)})_`);
+        });
+      }
+
+      lines.push('');
+    });
+  };
+
+  renderSection('Active', active);
+  renderSection('Discussed', discussed);
+
+  return lines.join('\n');
+};
+
+ipcMain.handle(IPC_CHANNELS.EXPORT_MARKDOWN, async (_event, data: AppState) => {
+  try {
+    const defaultFileName = `neoqueue-export-${new Date().toISOString().slice(0, 10)}.md`;
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: 'Export NeoQueue data (Markdown)',
+      defaultPath: defaultFileName,
+      filters: [{ name: 'Markdown', extensions: ['md'] }],
+    });
+
+    if (canceled || !filePath) {
+      return { success: true, canceled: true };
+    }
+
+    const markdown = toMarkdown(data);
+
+    await fs.promises.writeFile(filePath, markdown, { encoding: 'utf8' });
+
+    return { success: true, filePath };
+  } catch (error) {
+    console.error('Failed to export Markdown:', error);
+    return { success: false, error: String(error) };
+  }
+});
+
 const createWindow = (): void => {
   // Create the browser window.
   const appIcon = getAppIcon();
