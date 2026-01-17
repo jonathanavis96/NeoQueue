@@ -261,6 +261,9 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
                 className="follow-up-input"
                 placeholder="Add follow-up note..."
                 value={followUpText}
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded={acState.isOpen}
                 onChange={(e) => {
                   setFollowUpText(e.target.value);
                   syncCursorFromDom();

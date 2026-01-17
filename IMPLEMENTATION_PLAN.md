@@ -84,7 +84,7 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
   - Simple toggle/button to switch “List” vs “Canvas” when enabled
   - Ensure keyboard-only usage still works (Escape to cancel, Enter to save)
 
-- [ ] **Task 26:** Tab-autocomplete + learned dictionary (THOUGHTS.md)
+- [x] **Task 26:** Tab-autocomplete + learned dictionary (THOUGHTS.md)
   - Goal: speed up entry of recurring technical terms (projects, filenames, acronyms) without turning NeoQueue into an editor.
   - Constraints:
     - Must not break keyboard navigation (Tab should still move focus when no suggestion is active).
@@ -133,7 +133,7 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
   - Hook: token detection + suggestion list + selected index + key handling (Tab/Shift+Tab/Esc).
   - Keep implementation UI-agnostic so multiple inputs can reuse it.
 
-- [ ] **Task 26.4:** Integrate autocomplete UI into existing inputs
+- [x] **Task 26.4:** Integrate autocomplete UI into existing inputs
   - Pick one UI: inline ghost text OR a small popover anchored under the input.
   - Must degrade gracefully: if suggestion UI fails, typing/submitting still works.
   - Ensure feature is gated (experimental flag or setting).
@@ -150,7 +150,7 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
   - Only when Canvas is enabled.
   - Ensure Esc still cancels draft when suggestions are not open.
 
-- [ ] **Task 26.4.4:** Autocomplete QA pass (keyboard + a11y)
+- [x] **Task 26.4.4:** Autocomplete QA pass (keyboard + a11y)
   - Verify Tab behavior: accepts suggestion only when open; otherwise focus traversal.
   - Verify `aria-controls` + `aria-activedescendant` wiring is correct.
 

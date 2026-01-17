@@ -118,6 +118,9 @@ export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ on
           type="text"
           className="quick-capture-input"
           value={text}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={acState.isOpen}
           onChange={(e) => {
             setText(e.target.value);
             syncCursorFromDom();

@@ -208,6 +208,9 @@ export const CanvasView = forwardRef<CanvasViewRef, CanvasViewProps>(({ items, o
                 className="canvas-draft-input"
                 type="text"
                 value={draft.text}
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded={acState.isOpen}
                 onChange={(e) => {
                   setDraft({ ...draft, text: e.target.value });
                   syncCursorFromDom();

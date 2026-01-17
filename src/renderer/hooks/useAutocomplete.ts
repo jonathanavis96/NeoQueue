@@ -151,28 +151,42 @@ export const useAutocomplete = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const lastTokenRef = useRef<string>('');
+  const dismissedTokenRef = useRef<string>('');
 
   // Open/close behavior tracks token + suggestions.
   useEffect(() => {
     if (!enabled) {
       setIsOpen(false);
+      dismissedTokenRef.current = '';
       return;
     }
 
-    const shouldOpen = suggestions.length > 0;
+    // If the user explicitly dismissed suggestions with Esc, keep them closed
+    // until the token changes.
+    const shouldOpen =
+      suggestions.length > 0 &&
+      token.token !== '' &&
+      token.token !== dismissedTokenRef.current;
+
     setIsOpen(shouldOpen);
 
     if (token.token !== lastTokenRef.current) {
       lastTokenRef.current = token.token;
+      dismissedTokenRef.current = '';
       setSelectedIndex(0);
     } else if (selectedIndex >= suggestions.length) {
       setSelectedIndex(0);
     }
+
+    if (suggestions.length === 0) {
+      dismissedTokenRef.current = '';
+    }
   }, [enabled, selectedIndex, suggestions.length, token.token]);
 
   const dismiss = useCallback(() => {
+    dismissedTokenRef.current = token.token;
     setIsOpen(false);
-  }, []);
+  }, [token.token]);
 
   const cycle = useCallback((direction: 1 | -1) => {
     setSelectedIndex((prev) => {
