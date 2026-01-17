@@ -72,6 +72,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   setAlwaysOnTop: (enabled: boolean): Promise<{ success: boolean; enabled: boolean; error?: string }> =>
     ipcRenderer.invoke(IPC_CHANNELS.SET_ALWAYS_ON_TOP, enabled),
+
+  // Frameless window controls
+  windowMinimize: (): void => ipcRenderer.send(IPC_CHANNELS.WINDOW_MINIMIZE),
+  windowMaximize: (): void => ipcRenderer.send(IPC_CHANNELS.WINDOW_MAXIMIZE),
+  windowClose: (): void => ipcRenderer.send(IPC_CHANNELS.WINDOW_CLOSE),
+  windowIsMaximized: (): Promise<boolean> => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_IS_MAXIMIZED),
   
   // Keyboard shortcut event listeners
   onNewItemShortcut: (callback: ShortcutCallback): (() => void) => {
@@ -101,6 +107,10 @@ declare global {
       importJson: () => Promise<ImportJsonResponse>;
       getAlwaysOnTop: () => Promise<boolean>;
       setAlwaysOnTop: (enabled: boolean) => Promise<{ success: boolean; enabled: boolean; error?: string }>;
+      windowMinimize: () => void;
+      windowMaximize: () => void;
+      windowClose: () => void;
+      windowIsMaximized: () => Promise<boolean>;
       onNewItemShortcut: (callback: ShortcutCallback) => () => void;
       onShowWindow: (callback: ShortcutCallback) => () => void;
     };

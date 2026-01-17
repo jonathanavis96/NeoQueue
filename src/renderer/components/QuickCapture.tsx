@@ -32,7 +32,7 @@ export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ on
   const [text, setText] = useState('');
   const [cursor, setCursor] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const popoverId = useId();
 
@@ -52,18 +52,18 @@ export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ on
   // Expose focus method via ref
   useImperativeHandle(ref, () => ({
     focus: () => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
+      textareaRef.current?.focus();
+      textareaRef.current?.select();
     },
   }), []);
 
   // Auto-focus on mount
   useEffect(() => {
-    inputRef.current?.focus();
+    textareaRef.current?.focus();
   }, []);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(async (e?: React.FormEvent) => {
+    e?.preventDefault();
     
     const trimmedText = text.trim();
     if (!trimmedText || isSubmitting || disabled) return;
@@ -74,29 +74,36 @@ export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ on
       setText('');
     } finally {
       setIsSubmitting(false);
-      inputRef.current?.focus();
+      textareaRef.current?.focus();
     }
   }, [text, onAdd, isSubmitting, disabled]);
 
   const syncCursorFromDom = useCallback(() => {
-    const el = inputRef.current;
+    const el = textareaRef.current;
     if (!el) return;
     const next = el.selectionStart ?? el.value.length;
     setCursor(next);
   }, []);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const result = handleAutocompleteKeyDown(e);
     if (result.handled) {
       if (result.accept) {
         setText(result.accept.nextValue);
         const accept = result.accept;
         window.requestAnimationFrame(() => {
-          if (!inputRef.current) return;
-          inputRef.current.setSelectionRange(accept.nextCursor, accept.nextCursor);
+          if (!textareaRef.current) return;
+          textareaRef.current.setSelectionRange(accept.nextCursor, accept.nextCursor);
           setCursor(accept.nextCursor);
         });
       }
+      return;
+    }
+
+    // Cmd/Ctrl+Enter to submit
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSubmit();
       return;
     }
 
@@ -104,19 +111,30 @@ export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ on
     if (e.key === 'Escape') {
       setText('');
       window.requestAnimationFrame(() => {
-        inputRef.current?.focus();
+        textareaRef.current?.focus();
         syncCursorFromDom();
       });
     }
-  }, [handleAutocompleteKeyDown, syncCursorFromDom]);
+  }, [handleAutocompleteKeyDown, handleSubmit, syncCursorFromDom]);
+
+  // Click anywhere in the container to focus the textarea
+  const handleContainerClick = useCallback((e: React.MouseEvent) => {
+    // Don't steal focus if clicking on the textarea itself
+    if (e.target === textareaRef.current) return;
+    textareaRef.current?.focus();
+  }, []);
 
   return (
-    <form className="quick-capture" onSubmit={handleSubmit} role="search" aria-label="Add new discussion item">
+    <div 
+      className="quick-capture" 
+      onClick={handleContainerClick}
+      role="search" 
+      aria-label="Add new discussion item"
+    >
       <span className="quick-capture-prompt" aria-hidden="true">&gt;</span>
       <div className="quick-capture-input-wrap">
-        <input
-          ref={inputRef}
-          type="text"
+        <textarea
+          ref={textareaRef}
           className="quick-capture-input"
           value={text}
           role="combobox"
@@ -129,12 +147,13 @@ export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ on
           onKeyDown={handleKeyDown}
           onSelect={syncCursorFromDom}
           onKeyUp={syncCursorFromDom}
-          placeholder="Type a discussion point and press Enter..."
+          placeholder="Type a discussion point... (Ctrl/Cmd+Enter to add)"
           disabled={isSubmitting || disabled}
           spellCheck={false}
           autoCorrect="off"
           autoCapitalize="off"
           autoFocus
+          rows={4}
           aria-label="New discussion item"
           aria-describedby="quick-capture-hint"
           aria-controls={acState.isOpen ? popoverId : undefined}
@@ -147,11 +166,10 @@ export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ on
           isOpen={acState.isOpen}
         />
       </div>
-      <span className={`quick-capture-cursor ${text ? 'active' : ''}`} aria-hidden="true">_</span>
       <span id="quick-capture-hint" className="visually-hidden">
-        Press Enter to add, Escape to clear. Use Ctrl/Cmd+N to focus this input.
+        Press Ctrl/Cmd+Enter to add, Escape to clear. Use Ctrl/Cmd+N to focus this input.
       </span>
-    </form>
+    </div>
   );
 });
 

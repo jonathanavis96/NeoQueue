@@ -7,5 +7,7 @@ export { SearchBox } from './SearchBox';
 export { QueueItemCard } from './QueueItemCard';
 export { QueueItemList } from './QueueItemList';
 export { HelpPanel } from './HelpPanel';
-export { CanvasView } from './CanvasView';
 export { AutocompletePopover } from './AutocompletePopover';
+export { TitleBar } from './TitleBar';
+export { CommandsDropdown } from './CommandsDropdown';
+export { MatrixRainBackground } from './MatrixRainBackground';

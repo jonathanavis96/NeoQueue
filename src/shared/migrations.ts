@@ -12,8 +12,6 @@ import type {
   QueueItem,
   FollowUp,
   ExperimentalFlags,
-  CanvasLayoutSettings,
-  CanvasNodePosition,
 } from './types';
 
 const migrateLearnedDictionary = (raw: unknown): AppState['dictionary'] => {
@@ -37,53 +35,13 @@ const migrateExperimentalFlags = (raw: unknown): Partial<ExperimentalFlags> | un
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
 
   const record = raw as Record<string, unknown>;
-  const canvas = record.canvas;
   const autocomplete = record.autocomplete;
 
   const next: Partial<ExperimentalFlags> = {};
 
-  if (typeof canvas === 'boolean') next.canvas = canvas;
   if (typeof autocomplete === 'boolean') next.autocomplete = autocomplete;
 
   return Object.keys(next).length > 0 ? next : undefined;
-};
-
-const clampNumber = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
-
-const migrateCanvasNodePosition = (raw: unknown): CanvasNodePosition | null => {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-  const record = raw as Record<string, unknown>;
-
-  const leftPct = record.leftPct;
-  const topPct = record.topPct;
-
-  if (typeof leftPct !== 'number' || typeof topPct !== 'number') return null;
-  if (Number.isNaN(leftPct) || Number.isNaN(topPct)) return null;
-
-  return {
-    leftPct: clampNumber(leftPct, 0, 100),
-    topPct: clampNumber(topPct, 0, 100),
-  };
-};
-
-const migrateCanvasLayout = (raw: unknown): CanvasLayoutSettings | undefined => {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
-  const record = raw as Record<string, unknown>;
-  const positionsRaw = record.positions;
-  if (!positionsRaw || typeof positionsRaw !== 'object' || Array.isArray(positionsRaw)) return undefined;
-
-  const positions: Record<string, CanvasNodePosition> = {};
-  Object.entries(positionsRaw as Record<string, unknown>).forEach(([key, value]) => {
-    const id = typeof key === 'string' ? key.trim() : '';
-    if (!id) return;
-
-    const pos = migrateCanvasNodePosition(value);
-    if (!pos) return;
-
-    positions[id] = pos;
-  });
-
-  return Object.keys(positions).length > 0 ? { positions } : undefined;
 };
 
 const migrateSettings = (raw: unknown): AppState['settings'] => {
@@ -91,13 +49,11 @@ const migrateSettings = (raw: unknown): AppState['settings'] => {
 
   const record = raw as Record<string, unknown>;
   const experimentalFlags = migrateExperimentalFlags(record.experimentalFlags);
-  const canvasLayout = migrateCanvasLayout(record.canvasLayout);
 
-  if (!experimentalFlags && !canvasLayout) return undefined;
+  if (!experimentalFlags) return undefined;
 
   return {
     experimentalFlags,
-    canvasLayout,
   };
 };
 

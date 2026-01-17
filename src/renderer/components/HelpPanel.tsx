@@ -24,8 +24,12 @@ interface HelpPanelProps {
   onImportJson: () => void;
   scanlinesEnabled: boolean;
   onToggleScanlines: (enabled: boolean) => void;
-  experimentalFlags: { canvas: boolean; autocomplete: boolean };
-  onToggleExperimentalFlag: (key: 'canvas' | 'autocomplete', enabled: boolean) => void;
+  experimentalFlags: { autocomplete: boolean };
+  onToggleExperimentalFlag: (key: 'autocomplete', enabled: boolean) => void;
+  matrixRainEnabled: boolean;
+  matrixRainIntensity: number;
+  onToggleMatrixRain: (enabled: boolean) => void;
+  onChangeMatrixRainIntensity: (intensity: number) => void;
 }
 
 export const HelpPanel: React.FC<HelpPanelProps> = ({
@@ -44,6 +48,10 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
   onToggleScanlines,
   experimentalFlags,
   onToggleExperimentalFlag,
+  matrixRainEnabled,
+  matrixRainIntensity,
+  onToggleMatrixRain,
+  onChangeMatrixRainIntensity,
 }) => {
   const [exportDateField, setExportDateField] = useState<'createdAt' | 'completedAt'>('createdAt');
   const [exportFrom, setExportFrom] = useState('');
@@ -164,14 +172,6 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
             <label className="help-panel-toggle">
               <input
                 type="checkbox"
-                checked={experimentalFlags.canvas}
-                onChange={(e) => onToggleExperimentalFlag('canvas', e.target.checked)}
-              />
-              <span>Canvas view</span>
-            </label>
-            <label className="help-panel-toggle">
-              <input
-                type="checkbox"
                 checked={experimentalFlags.autocomplete}
                 onChange={(e) => onToggleExperimentalFlag('autocomplete', e.target.checked)}
               />
@@ -194,6 +194,35 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
             </label>
             <p className="help-panel-effects-hint">
               Subtle overlay for Matrix vibes. Default is off.
+            </p>
+          </div>
+
+          <div className="help-panel-effects">
+            <label className="help-panel-toggle">
+              <input
+                type="checkbox"
+                checked={matrixRainEnabled}
+                onChange={(e) => onToggleMatrixRain(e.target.checked)}
+              />
+              <span>Matrix rain background</span>
+            </label>
+            {matrixRainEnabled && (
+              <div className="help-panel-slider-row">
+                <label className="help-panel-slider-label">
+                  <span>Intensity: {matrixRainIntensity}%</span>
+                  <input
+                    type="range"
+                    min="1"
+                    max="100"
+                    value={matrixRainIntensity}
+                    onChange={(e) => onChangeMatrixRainIntensity(Number(e.target.value))}
+                    className="help-panel-slider"
+                  />
+                </label>
+              </div>
+            )}
+            <p className="help-panel-effects-hint">
+              Falling code effect behind the app. Default intensity is 15%.
             </p>
           </div>
 

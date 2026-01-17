@@ -6,12 +6,12 @@
 }
 
 :root {
-  /* Matrix theme colors */
-  --matrix-black: #0a0a0a;
-  --matrix-dark: #0d0d0d;
-  --matrix-green: #00ff00;
-  --matrix-green-dim: #00cc00;
-  --matrix-green-dark: #003300;
+  /* Theme colors - darker background, brighter text */
+  --matrix-black: #000000;
+  --matrix-dark: #050505;
+  --matrix-green: #e0ffe0;
+  --matrix-green-dim: #a0d0a0;
+  --matrix-green-dark: #306030;
   --matrix-green-glow: rgba(0, 255, 0, 0.3);
   
   /* Typography */
@@ -38,8 +38,8 @@ html, body {
 
 body {
   font-family: var(--font-mono);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.6;
   color: var(--matrix-green);
   background-color: var(--matrix-black);
   -webkit-font-smoothing: antialiased;

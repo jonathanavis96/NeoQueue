@@ -53,12 +53,16 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [draftText, setDraftText] = useState(item.text);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const editInputRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
 
   const [followUpText, setFollowUpText] = useState('');
   const [followUpCursor, setFollowUpCursor] = useState(0);
   const [isAddingFollowUp, setIsAddingFollowUp] = useState(false);
+  const [copiedFollowUpId, setCopiedFollowUpId] = useState<string | null>(null);
+  const [editingFollowUpId, setEditingFollowUpId] = useState<string | null>(null);
+  const [editingFollowUpText, setEditingFollowUpText] = useState('');
   const followUpInputRef = useRef<HTMLInputElement>(null);
+  const editFollowUpInputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isEditing) return;
@@ -91,6 +95,7 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
 
   const handleCopy = useCallback(async () => {
     try {
+      // Copy only the main item text
       await navigator.clipboard.writeText(item.text);
       triggerPulse('copy');
       setIsCopied(true);
@@ -159,14 +164,16 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
     setIsEditing(true);
   }, [item.isCompleted]);
 
-  const handleEditKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+  const handleEditKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Ctrl/Cmd+Enter to save, Escape to cancel
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       void commitEdit();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       exitEditMode();
     }
+    // Regular Enter allows new lines
   }, [commitEdit, exitEditMode]);
 
   const syncCursorFromDom = useCallback(() => {
@@ -176,26 +183,111 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
     setFollowUpCursor(next);
   }, []);
 
-  const handleRightClick = useCallback(async (e: React.MouseEvent) => {
+  const handleCopyFollowUp = useCallback(async (followUpId: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      triggerPulse('copy');
+      setCopiedFollowUpId(followUpId);
+      setTimeout(() => setCopiedFollowUpId(null), 1500);
+    } catch (err) {
+      console.error('Failed to copy follow-up:', err);
+    }
+  }, [triggerPulse]);
+
+  const handleRightClick = useCallback((e: React.MouseEvent) => {
     // "Right-click copy + follow-up" ergonomics:
     // - Copy the item text
     // - Expand follow-ups
     // - Focus the follow-up input for immediate typing
     // Avoid hijacking context menus on interactive elements (buttons/inputs).
     const target = e.target as HTMLElement | null;
-    if (target && target.closest('button, input, textarea, a')) return;
+    if (target && target.closest('button, input, textarea, a, .follow-up-item')) return;
 
+    // Prevent default context menu immediately
     e.preventDefault();
+    e.stopPropagation();
+    
+    // Prevent any native context menu from appearing
+    if (e.nativeEvent) {
+      e.nativeEvent.preventDefault?.();
+      e.nativeEvent.stopPropagation?.();
+      e.nativeEvent.stopImmediatePropagation?.();
+    }
 
-    await handleCopy();
+    // Copy and expand without animation frame to reduce flicker
+    handleCopy();
     setIsExpanded(true);
 
     // Wait a tick so the input exists in the DOM.
     window.setTimeout(() => {
       followUpInputRef.current?.focus();
       syncCursorFromDom();
-    }, 0);
+    }, 50);
   }, [handleCopy, syncCursorFromDom]);
+
+  const handleFollowUpRightClick = useCallback((e: React.MouseEvent, followUpId: string, text: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleCopyFollowUp(followUpId, text);
+  }, [handleCopyFollowUp]);
+
+  // Start editing a follow-up note
+  const handleStartEditFollowUp = useCallback((followUpId: string, text: string) => {
+    setEditingFollowUpId(followUpId);
+    setEditingFollowUpText(text);
+    // Focus the input after render
+    window.setTimeout(() => {
+      editFollowUpInputRef.current?.focus();
+      editFollowUpInputRef.current?.select();
+    }, 0);
+  }, []);
+
+  // Cancel editing a follow-up
+  const handleCancelEditFollowUp = useCallback(() => {
+    setEditingFollowUpId(null);
+    setEditingFollowUpText('');
+  }, []);
+
+  // Save edited follow-up
+  const handleSaveEditFollowUp = useCallback(async () => {
+    if (!editingFollowUpId) return;
+    
+    const trimmed = editingFollowUpText.trim();
+    if (!trimmed) {
+      handleCancelEditFollowUp();
+      return;
+    }
+
+    // Find the original follow-up to check if changed
+    const originalFollowUp = item.followUps.find(fu => fu.id === editingFollowUpId);
+    if (originalFollowUp && trimmed === originalFollowUp.text) {
+      handleCancelEditFollowUp();
+      return;
+    }
+
+    // Update the follow-ups array with the edited text
+    const updatedFollowUps = item.followUps.map(fu => 
+      fu.id === editingFollowUpId ? { ...fu, text: trimmed } : fu
+    );
+
+    try {
+      triggerPulse('other');
+      await onUpdateItem(item.id, { followUps: updatedFollowUps });
+      handleCancelEditFollowUp();
+    } catch (err) {
+      console.error('Failed to update follow-up:', err);
+    }
+  }, [editingFollowUpId, editingFollowUpText, item.followUps, item.id, onUpdateItem, triggerPulse, handleCancelEditFollowUp]);
+
+  const handleEditFollowUpKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      void handleSaveEditFollowUp();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancelEditFollowUp();
+    }
+  }, [handleSaveEditFollowUp, handleCancelEditFollowUp]);
 
   const handleFollowUpSubmit = useCallback(async () => {
     const trimmedText = followUpText.trim();
@@ -241,13 +333,26 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
 
   const hasFollowUps = item.followUps.length > 0;
 
+  // Handle left-click on the card to expand if it has follow-ups
+  const handleCardClick = useCallback((e: React.MouseEvent) => {
+    // Don't expand if clicking on interactive elements or inside the follow-ups section
+    const target = e.target as HTMLElement | null;
+    if (target && target.closest('button, input, textarea, a, .queue-item-actions, .queue-item-followups-section')) return;
+    
+    // Only expand/collapse if there are follow-ups
+    if (hasFollowUps) {
+      setIsExpanded((prev) => !prev);
+    }
+  }, [hasFollowUps]);
+
   return (
     <div
-      className={`queue-item-card ${item.isCompleted ? 'completed' : ''} ${isExpanded ? 'expanded' : ''}`}
+      className={`queue-item-card ${item.isCompleted ? 'completed' : ''} ${isExpanded ? 'expanded' : ''} ${hasFollowUps ? 'has-followups' : ''}`}
       onContextMenu={handleRightClick}
+      onClick={handleCardClick}
       role="group"
       aria-label="Queue item"
-      title="Right-click to copy and add a follow-up"
+      title={hasFollowUps ? "Click to expand/collapse notes, right-click to copy" : "Right-click to copy and add a note"}
     >
       <div className="queue-item-main">
         <button
@@ -261,9 +366,8 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
         
         <div className="queue-item-content">
           {isEditing ? (
-            <input
+            <textarea
               ref={editInputRef}
-              type="text"
               className="queue-item-edit"
               value={draftText}
               onChange={(e) => setDraftText(e.target.value)}
@@ -273,10 +377,11 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
                 void commitEdit();
               }}
               disabled={isSavingEdit}
-              aria-label="Edit queue item"
+              aria-label="Edit queue item (Ctrl+Enter to save, Escape to cancel)"
               spellCheck={false}
               autoCorrect="off"
               autoCapitalize="off"
+              rows={Math.max(3, draftText.split('\n').length)}
             />
           ) : (
             <p
@@ -294,18 +399,18 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
                 className="queue-item-followups-btn"
                 onClick={handleToggleExpand}
                 aria-expanded={isExpanded}
-                aria-label={`${item.followUps.length} follow-up${item.followUps.length !== 1 ? 's' : ''}, click to ${isExpanded ? 'collapse' : 'expand'}`}
+                aria-label={`${item.followUps.length} note${item.followUps.length !== 1 ? 's' : ''}, click to ${isExpanded ? 'collapse' : 'expand'}`}
               >
-                {item.followUps.length} follow-up{item.followUps.length !== 1 ? 's' : ''} {isExpanded ? '▼' : '▶'}
+                {item.followUps.length} note{item.followUps.length !== 1 ? 's' : ''} {isExpanded ? '▼' : '▶'}
               </button>
             )}
             {!hasFollowUps && (
               <button
                 className="queue-item-add-followup-btn"
                 onClick={handleToggleExpand}
-                aria-label="Add follow-up"
+                aria-label="Add note"
               >
-                [+ follow-up]
+                [+ note]
               </button>
             )}
           </div>
@@ -339,10 +444,35 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
           {hasFollowUps && (
             <div className="follow-ups-list">
               {item.followUps.map((followUp) => (
-                <div key={followUp.id} className="follow-up-item">
+                <div 
+                  key={followUp.id} 
+                  className={`follow-up-item ${copiedFollowUpId === followUp.id ? 'copied' : ''} ${editingFollowUpId === followUp.id ? 'editing' : ''}`}
+                  onContextMenu={(e) => handleFollowUpRightClick(e, followUp.id, followUp.text)}
+                  onDoubleClick={() => handleStartEditFollowUp(followUp.id, followUp.text)}
+                  title="Double-click to edit, right-click to copy"
+                >
                   <span className="follow-up-prefix">└─</span>
-                  <span className="follow-up-text">{followUp.text}</span>
-                  <span className="follow-up-time">{formatRelativeTime(followUp.createdAt)}</span>
+                  {editingFollowUpId === followUp.id ? (
+                    <textarea
+                      ref={editFollowUpInputRef}
+                      className="follow-up-edit"
+                      value={editingFollowUpText}
+                      onChange={(e) => setEditingFollowUpText(e.target.value)}
+                      onKeyDown={handleEditFollowUpKeyDown}
+                      onBlur={() => handleSaveEditFollowUp()}
+                      rows={Math.max(2, editingFollowUpText.split('\n').length)}
+                      spellCheck={false}
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      aria-label="Edit note (Ctrl+Enter to save, Escape to cancel)"
+                    />
+                  ) : (
+                    <>
+                      <span className="follow-up-text">{followUp.text}</span>
+                      <span className="follow-up-time">{formatRelativeTime(followUp.createdAt)}</span>
+                      <span className="follow-up-copy-indicator">{copiedFollowUpId === followUp.id ? '[✓]' : '[⎘]'}</span>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -356,7 +486,7 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
                 ref={followUpInputRef}
                 type="text"
                 className="follow-up-input"
-                placeholder="Add follow-up note..."
+                placeholder="Add note..."
                 value={followUpText}
                 role="combobox"
                 aria-autocomplete="list"
@@ -372,7 +502,7 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
                 spellCheck={false}
                 autoCorrect="off"
                 autoCapitalize="off"
-                aria-label="Add follow-up note"
+                aria-label="Add note"
                 aria-controls={acState.isOpen ? followUpPopoverId : undefined}
                 aria-activedescendant={activeDescendantId}
               />
@@ -387,7 +517,7 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
               className="follow-up-submit-btn"
               onClick={handleFollowUpSubmit}
               disabled={!followUpText.trim() || isAddingFollowUp}
-              aria-label="Submit follow-up"
+              aria-label="Submit note"
             >
               [+]
             </button>

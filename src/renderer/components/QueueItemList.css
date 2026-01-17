@@ -82,6 +82,24 @@
   outline-offset: 2px;
 }
 
+/* Tab drop target styles for cross-tab dragging */
+.queue-tab.drop-target {
+  background-color: rgba(0, 255, 0, 0.15);
+  border-color: var(--matrix-green);
+  color: var(--matrix-green);
+  box-shadow: 0 0 12px rgba(0, 255, 0, 0.3);
+  transform: scale(1.02);
+  transition: all 0.15s ease;
+}
+
+.queue-tab .drop-hint {
+  display: block;
+  font-size: 9px;
+  opacity: 0.8;
+  margin-top: 2px;
+  font-weight: normal;
+}
+
 .queue-tab-panel {
   padding-top: var(--spacing-md);
 }
@@ -89,4 +107,110 @@
 .queue-section-items {
   display: flex;
   flex-direction: column;
+}
+
+/* Drag and drop wrapper */
+.queue-item-drag-wrapper {
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+  border-radius: var(--radius-md);
+  position: relative;
+  z-index: 1;
+}
+
+.queue-item-drag-wrapper:active {
+  cursor: grabbing;
+}
+
+.queue-item-drag-wrapper.dragging {
+  opacity: 0.3;
+  background-color: rgba(0, 255, 0, 0.05);
+  border: 1px dashed var(--matrix-green-dark);
+  border-radius: var(--radius-md);
+}
+
+/* Drop target spacing */
+.queue-item-drag-wrapper.drop-target-before {
+  padding-top: 40px;
+  transition: padding-top 0.2s ease-out;
+}
+
+.queue-item-drag-wrapper.drop-target-after {
+  padding-bottom: 40px;
+  transition: padding-bottom 0.2s ease-out;
+}
+
+.queue-item-drag-wrapper:hover {
+  background-color: rgba(0, 255, 0, 0.02);
+}
+
+/* Make the card take full width */
+.queue-item-drag-wrapper > .queue-item-card {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Custom drag ghost - floats at cursor */
+.custom-drag-ghost {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid var(--matrix-green);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  max-width: 200px;
+  box-shadow: 0 0 12px rgba(0, 255, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.4);
+  transform: scale(0.85);
+  animation: ghost-pulse 2s ease-in-out infinite;
+}
+
+.drag-ghost-text {
+  color: var(--matrix-green);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  opacity: 0.9;
+}
+
+@keyframes ghost-pulse {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(0, 255, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(0, 255, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Matrix rain drop indicator - positioned to emerge from behind cards */
+.drop-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40px; /* Compact height for 18px characters */
+  pointer-events: none;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.drop-indicator-before {
+  top: 2px;
+}
+
+.drop-indicator-after {
+  bottom: 2px;
+}
+
+/* Matrix rain canvas */
+.matrix-rain-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }

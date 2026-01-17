@@ -12,6 +12,12 @@ export interface FollowUp {
   createdAt: Date;
 }
 
+export interface SavedCommand {
+  id: string;
+  text: string;
+  createdAt: Date;
+}
+
 /**
  * Represents a discussion item in the queue
  */
@@ -37,27 +43,10 @@ export interface LearnedDictionary {
   tokens: string[];
 }
 
-export type ExperimentalFlagKey = 'canvas' | 'autocomplete';
+export type ExperimentalFlagKey = 'autocomplete';
 
 export interface ExperimentalFlags {
-  canvas: boolean;
   autocomplete: boolean;
-}
-
-export type CanvasNodePosition = {
-  /** Left position as a percentage of the canvas width (0-100). */
-  leftPct: number;
-  /** Top position as a percentage of the canvas height (0-100). */
-  topPct: number;
-};
-
-export interface CanvasLayoutSettings {
-  /**
-   * Node positions keyed by QueueItem.id.
-   *
-   * Why: Lets the Canvas prototype persist a stable layout without changing the core QueueItem model.
-   */
-  positions: Record<string, CanvasNodePosition>;
 }
 
 export interface AppSettings {
@@ -68,13 +57,19 @@ export interface AppSettings {
    * fall back to build-time defaults (VITE_EXPERIMENTAL_*).
    */
   experimentalFlags?: Partial<ExperimentalFlags>;
-
-  /** Optional persisted Canvas layout data (experimental). */
-  canvasLayout?: CanvasLayoutSettings;
+  /**
+   * Matrix rain background settings.
+   */
+  matrixRain?: {
+    enabled: boolean;
+    /** Intensity from 0-100, default 15 */
+    intensity: number;
+  };
 }
 
 export interface AppState {
   items: QueueItem[];
+  commands?: SavedCommand[];
   version: number;
   dictionary: LearnedDictionary;
   settings?: AppSettings;
@@ -117,6 +112,10 @@ export const IPC_CHANNELS = {
   // Window controls / settings
   GET_ALWAYS_ON_TOP: 'get-always-on-top',
   SET_ALWAYS_ON_TOP: 'set-always-on-top',
+  WINDOW_MINIMIZE: 'window-minimize',
+  WINDOW_MAXIMIZE: 'window-maximize',
+  WINDOW_CLOSE: 'window-close',
+  WINDOW_IS_MAXIMIZED: 'window-is-maximized',
   // Keyboard shortcut events from main to renderer
   SHORTCUT_NEW_ITEM: 'shortcut:new-item',
   SHORTCUT_TOGGLE_WINDOW: 'shortcut:toggle-window',

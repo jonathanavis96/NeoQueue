@@ -24,6 +24,9 @@ export const ExperimentalFlagsProvider: React.FC<{ children: React.ReactNode }> 
 
     const load = async () => {
       try {
+        // Guard against missing electronAPI
+        if (!window.electronAPI?.loadData) return;
+
         const response = await window.electronAPI.loadData();
         if (!response.success || !response.data) return;
         const next = response.data.settings?.experimentalFlags;
@@ -44,6 +47,12 @@ export const ExperimentalFlagsProvider: React.FC<{ children: React.ReactNode }> 
 
   const setFlag = useCallback<ExperimentalFlagsContextValue['setFlag']>(
     async (key, enabled) => {
+      // Guard against missing electronAPI
+      if (!window.electronAPI?.loadData || !window.electronAPI?.saveData) {
+        console.warn('Cannot save experimental flags: app not running in Electron context');
+        return;
+      }
+
       // Optimistic UI update.
       const nextOverrides: ExperimentalFlagOverrides = { ...(overrides ?? {}), [key]: enabled };
       setOverrides(nextOverrides);

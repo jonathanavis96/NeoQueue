@@ -4,38 +4,45 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-  background-color: var(--matrix-black);
+  background-color: transparent; /* Transparent to show matrix rain behind */
   position: relative;
   isolation: isolate; /* keep overlays contained */
 }
 
 /* Scanline / CRT overlay (default off) */
+/* Scanlines - animated horizontal GREEN lines like old CRT monitors */
+@keyframes scanline-move {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 8px; }
+}
+
 .app.scanlines-enabled::before {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 5;
-  opacity: 0.18;
+  z-index: 1000;
   background:
     repeating-linear-gradient(
       to bottom,
-      rgba(0, 255, 0, 0.04) 0px,
-      rgba(0, 255, 0, 0.04) 1px,
-      rgba(0, 0, 0, 0) 2px,
-      rgba(0, 0, 0, 0) 4px
+      rgba(0, 255, 0, 0.03) 0px,
+      rgba(0, 255, 0, 0.03) 1px,
+      transparent 1px,
+      transparent 4px
     );
-  mix-blend-mode: screen;
+  background-size: 100% 4px;
+  animation: scanline-move 0.5s linear infinite;
 }
 
+/* CRT screen glow/vignette effect */
 .app.scanlines-enabled::after {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 6;
-  opacity: 0.10;
-  background: radial-gradient(circle at 50% 10%, rgba(0, 255, 0, 0.16), rgba(0, 0, 0, 0) 55%);
+  z-index: 999;
+  background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.2) 100%);
+  box-shadow: inset 0 0 100px rgba(0, 255, 0, 0.02);
 }
 
 /* Pulse/glitch on key actions (kept short and safe) */
@@ -67,6 +74,9 @@
 .app-header {
   padding: var(--spacing-lg);
   border-bottom: 1px solid var(--matrix-green-dark);
+  position: relative;
+  z-index: 10; /* Above matrix rain background */
+  background-color: transparent; /* Let rain show through gaps */
 }
 
 .app-header-row {
@@ -78,8 +88,17 @@
 
 .app-header-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--spacing-sm);
+}
+
+/* Align buttons that don't have sub-elements (like hints) */
+.app-header-actions > .search-box,
+.app-header-actions > .commands-dropdown,
+.app-header-actions > .app-help-button {
+  margin-top: 0;
+  /* Align with the PIN button (which has padding: 5px 12px) */
+  align-self: flex-start;
 }
 
 .app-view-toggle {
@@ -129,22 +148,46 @@
   opacity: 0.9;
 }
 
+.app-pin-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  align-self: flex-start;
+}
+
 .app-pin-button {
-  width: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 0;
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid var(--matrix-green-dark);
+  border-radius: var(--radius-sm);
+  color: var(--matrix-green-dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  transition: all 0.15s ease;
+  opacity: 0.5;
 }
 
 .app-pin-button.is-pinned {
+  opacity: 1;
   border-color: var(--matrix-green);
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.18);
+  background-color: rgba(0, 255, 0, 0.15);
+  box-shadow: 0 0 12px rgba(0, 255, 0, 0.3);
+  color: var(--matrix-green);
 }
 
-.app-pin-glyph {
-  font-size: 14px;
+.app-pin-hint {
+  font-family: var(--font-mono);
+  font-size: 8px;
   line-height: 1;
+  color: var(--matrix-green-dim);
+  opacity: 0.5;
+  white-space: nowrap;
 }
 
 .app-help-button:hover {
@@ -163,20 +206,33 @@
   color: var(--matrix-green);
   text-transform: uppercase;
   letter-spacing: 4px;
-  text-shadow: 0 0 10px var(--matrix-green-glow);
+  text-shadow: 0 0 10px var(--matrix-green-glow), 0 0 4px rgba(0, 0, 0, 1);
   margin-bottom: var(--spacing-xs);
+  /* Tight padding - just enough for readability over rain */
+  background: rgba(0, 0, 0, 0.75);
+  padding: 2px 4px;
+  border-radius: 2px;
+  display: inline-block;
 }
 
 .app-subtitle {
   font-size: 12px;
   color: var(--matrix-green-dim);
-  opacity: 0.7;
+  opacity: 0.85;
+  /* Tight padding for readability over rain */
+  background: rgba(0, 0, 0, 0.7);
+  padding: 1px 3px;
+  border-radius: 2px;
+  display: inline-block;
 }
 
 .app-main {
   flex: 1;
   padding: var(--spacing-lg);
   overflow-y: auto;
+  position: relative;
+  z-index: 10; /* Above matrix rain background */
+  background-color: transparent; /* Let rain show through gaps between UI elements */
 }
 
 /* Lightweight startup notification banner (in-app, non-persistent) */

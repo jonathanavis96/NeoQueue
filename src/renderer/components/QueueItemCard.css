@@ -69,17 +69,29 @@
   cursor: text;
 }
 
+/* Card with follow-ups is clickable anywhere */
+.queue-item-card.has-followups {
+  cursor: pointer;
+}
+
+.queue-item-card.has-followups:hover {
+  border-color: var(--matrix-green-dim);
+}
+
 .queue-item-edit {
   width: 100%;
   background: transparent;
   border: 1px solid rgba(0, 255, 0, 0.25);
   border-radius: var(--radius-sm);
-  padding: 4px 6px;
+  padding: 8px 10px;
   color: var(--matrix-green);
   font-family: var(--font-mono);
   font-size: 13px;
+  line-height: 1.5;
   outline: none;
   margin-bottom: var(--spacing-xs);
+  resize: vertical;
+  min-height: 60px;
 }
 
 .queue-item-edit:focus {
@@ -110,6 +122,23 @@
 
 .queue-item-followups {
   color: var(--matrix-green-dim);
+}
+
+.queue-item-followups-btn,
+.queue-item-add-followup-btn {
+  background: transparent;
+  border: none;
+  color: var(--matrix-green-dark);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.queue-item-followups-btn:hover,
+.queue-item-add-followup-btn:hover {
+  color: var(--matrix-green);
 }
 
 /* Action buttons */
@@ -163,14 +192,23 @@
 
 .follow-up-item {
   display: flex;
-  gap: var(--spacing-xs);
-  align-items: baseline;
-  font-size: 12px;
+  gap: var(--spacing-sm);
+  align-items: flex-start;
+  font-size: 13px;
+  padding: var(--spacing-xs) 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.follow-up-item:hover {
+  background-color: rgba(0, 255, 0, 0.05);
 }
 
 .follow-up-prefix {
   color: var(--matrix-green-dark);
   flex-shrink: 0;
+  padding-top: 1px;
 }
 
 .follow-up-text {
@@ -179,13 +217,56 @@
   min-width: 0;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  line-height: 1.4;
 }
 
 .follow-up-time {
   color: var(--matrix-green-dark);
   opacity: 0.75;
-  font-size: 10px;
+  font-size: 11px;
   flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.follow-up-copy-indicator {
+  color: var(--matrix-green);
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.follow-up-item:hover .follow-up-copy-indicator {
+  opacity: 0.6;
+}
+
+.follow-up-item.copied .follow-up-copy-indicator {
+  opacity: 1;
+}
+
+/* Follow-up editing */
+.follow-up-item.editing {
+  background-color: rgba(0, 255, 0, 0.05);
+}
+
+.follow-up-edit {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 1px solid rgba(0, 255, 0, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  color: var(--matrix-green);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.4;
+  outline: none;
+  resize: vertical;
+  min-height: 40px;
+}
+
+.follow-up-edit:focus {
+  border-color: rgba(0, 255, 0, 0.45);
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.12);
 }
 
 .follow-up-input-container {

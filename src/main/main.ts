@@ -19,7 +19,7 @@ try {
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 
-const isDev = process.env.NODE_ENV !== 'production' || !app.isPackaged;
+const isDev = !app.isPackaged;
 
 const getAssetPath = (...segments: string[]): string => {
   // In dev, app.getAppPath() points at the project root (where package.json lives).
@@ -319,17 +319,76 @@ ipcMain.handle(IPC_CHANNELS.GET_VERSION, async () => {
 });
 
 ipcMain.handle(IPC_CHANNELS.GET_ALWAYS_ON_TOP, async () => {
-  return getAlwaysOnTopSetting();
+  // Return our manual tracking state since isAlwaysOnTop() can be unreliable on WSL/Linux
+  // This is set by SET_ALWAYS_ON_TOP and persisted in settings
+  return isPinnedManually || getAlwaysOnTopSetting();
 });
+
+// Track pin state manually since isAlwaysOnTop() can be unreliable on WSL
+// Initialize from saved settings
+let isPinnedManually = false;
 
 ipcMain.handle(IPC_CHANNELS.SET_ALWAYS_ON_TOP, async (_event, enabled: boolean) => {
   try {
     const safeEnabled = Boolean(enabled);
     setAlwaysOnTopSetting(safeEnabled);
-    mainWindow?.setAlwaysOnTop(safeEnabled);
+    isPinnedManually = safeEnabled;
+    
+    if (!mainWindow) {
+      return { success: false, enabled: safeEnabled, error: 'No window' };
+    }
+    
+    // On WSL/Linux, try multiple approaches
+    // The key insight: WSLg uses Weston compositor, which may not respect all X11 hints
+    // But setAlwaysOnTop with specific levels can still work
+    
+    if (safeEnabled) {
+      // Try levels from most to least aggressive
+      // 'dock' level is often respected by compositors
+      const levels = [
+        'screen-saver',  // Highest - above everything
+        'pop-up-menu',   // High - above most windows  
+        'floating',      // Medium - general floating
+        'modal-panel',   // For modal dialogs
+        'status',        // Status windows
+      ] as const;
+      
+      let success = false;
+      for (const level of levels) {
+        try {
+          mainWindow.setAlwaysOnTop(true, level);
+          // Give it a moment to take effect
+          await new Promise(resolve => setTimeout(resolve, 50));
+          if (mainWindow.isAlwaysOnTop()) {
+            success = true;
+            console.log(`Always on top succeeded with level: ${level}`);
+            break;
+          }
+        } catch (e) {
+          // Continue to next level
+        }
+      }
+      
+      // If no level worked, try without level specification
+      if (!success) {
+        mainWindow.setAlwaysOnTop(true);
+        console.log('Always on top: using default level');
+      }
+      
+      // Additional: bring to front
+      mainWindow.moveTop();
+      mainWindow.focus();
+      
+    } else {
+      mainWindow.setAlwaysOnTop(false);
+    }
+    
     tray?.setContextMenu(buildTrayMenu());
-    return { success: true, enabled: safeEnabled };
+    
+    // Return our manual tracking state since isAlwaysOnTop() may lie
+    return { success: true, enabled: isPinnedManually };
   } catch (error) {
+    console.error('setAlwaysOnTop error:', error);
     return { success: false, enabled: Boolean(enabled), error: String(error) };
   }
 });
@@ -508,11 +567,71 @@ const scheduleWindowStateSave = (win: BrowserWindow, debounceMs = 250): void => 
   }, debounceMs);
 };
 
+// IPC handlers for frameless window controls
+ipcMain.on(IPC_CHANNELS.WINDOW_MINIMIZE, () => {
+  mainWindow?.minimize();
+});
+
+// Track maximize state manually since native APIs can be unreliable on WSL
+let isManuallyMaximized = false;
+let boundsBeforeMaximize: Electron.Rectangle | null = null;
+
+ipcMain.on(IPC_CHANNELS.WINDOW_MAXIMIZE, () => {
+  if (!mainWindow) return;
+  
+  const { screen } = require('electron');
+  
+  if (isManuallyMaximized) {
+    // RESTORE: Go back to previous size
+    isManuallyMaximized = false;
+    
+    if (boundsBeforeMaximize) {
+      mainWindow.setBounds(boundsBeforeMaximize);
+    } else {
+      // Fallback to sensible default
+      const currentDisplay = screen.getDisplayMatching(mainWindow.getBounds());
+      const workArea = currentDisplay.workArea;
+      mainWindow.setBounds({
+        x: workArea.x + 50,
+        y: workArea.y + 50,
+        width: Math.min(800, workArea.width - 100),
+        height: Math.min(600, workArea.height - 100),
+      });
+    }
+    boundsBeforeMaximize = null;
+  } else {
+    // MAXIMIZE: Save current bounds and fill screen
+    boundsBeforeMaximize = mainWindow.getBounds();
+    isManuallyMaximized = true;
+    
+    const currentDisplay = screen.getDisplayMatching(mainWindow.getBounds());
+    const workArea = currentDisplay.workArea;
+    
+    mainWindow.setBounds({
+      x: workArea.x,
+      y: workArea.y,
+      width: workArea.width,
+      height: workArea.height,
+    });
+  }
+});
+
+ipcMain.on(IPC_CHANNELS.WINDOW_CLOSE, () => {
+  mainWindow?.close();
+});
+
+ipcMain.handle(IPC_CHANNELS.WINDOW_IS_MAXIMIZED, () => {
+  // Use our manual tracking which is more reliable on WSL
+  return isManuallyMaximized;
+});
+
 const createWindow = (): void => {
   // Create the browser window.
   const appIcon = getAppIcon();
 
   const savedWindowState = getInitialWindowState();
+
+  const initialAlwaysOnTop = getAlwaysOnTopSetting();
 
   mainWindow = new BrowserWindow({
     width: savedWindowState.bounds.width,
@@ -523,19 +642,42 @@ const createWindow = (): void => {
     minHeight: 300,
     backgroundColor: '#0a0a0a',
     // Apply persisted "pin" setting at creation time.
-    alwaysOnTop: getAlwaysOnTopSetting(),
+    alwaysOnTop: initialAlwaysOnTop,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: false, // Required for preload script to work on Linux/WSL2
       preload: path.join(__dirname, 'preload.js'),
     },
     // App icon (used on Windows/Linux; macOS uses the app bundle icon)
     ...(appIcon ? { icon: appIcon } : {}),
 
-    // Matrix-style: dark title bar
-    titleBarStyle: 'default',
+    // Frameless window - custom title bar in renderer
+    frame: false,
+    // Remove the application menu bar
+    autoHideMenuBar: true,
     show: false, // Don't show until ready
   });
+
+  // Remove the application menu entirely
+  mainWindow.setMenu(null);
+
+  // Re-apply always on top with proper level after window creation
+  if (initialAlwaysOnTop) {
+    isPinnedManually = true;
+    // Try screen-saver level first (highest priority)
+    try {
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+      if (!mainWindow.isAlwaysOnTop()) {
+        mainWindow.setAlwaysOnTop(true, 'floating');
+      }
+      if (!mainWindow.isAlwaysOnTop()) {
+        mainWindow.setAlwaysOnTop(true);
+      }
+    } catch {
+      mainWindow.setAlwaysOnTop(true);
+    }
+  }
 
   // Close-to-tray: intercept the close button and hide the window instead.
   // Note: we only do this when a tray exists; otherwise the user could "lose" the app.
@@ -559,7 +701,8 @@ const createWindow = (): void => {
     mainWindow.webContents.openDevTools();
   } else {
     // In production, load from built files
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    // __dirname is dist/main/main/, so go up two levels to dist/, then into renderer/
+    mainWindow.loadFile(path.join(__dirname, '../../renderer/index.html'));
   }
 
   // Show window when ready to prevent visual flash
@@ -763,8 +906,9 @@ const registerGlobalShortcuts = (): void => {
   // Ctrl+Shift+Q: Toggle window visibility (quick access)
   globalShortcut.register('CommandOrControl+Shift+Q', () => {
     if (mainWindow) {
-      if (mainWindow.isVisible() && mainWindow.isFocused()) {
-        mainWindow.hide();
+      if (mainWindow.isVisible() && !mainWindow.isMinimized()) {
+        // If visible, minimize to taskbar (more reliable than hide on Linux)
+        mainWindow.minimize();
       } else {
         showAndFocusWindow();
       }

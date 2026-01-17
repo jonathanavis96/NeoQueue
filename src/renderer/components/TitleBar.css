@@ -1,0 +1,70 @@
+/* TitleBar - Custom frameless window title bar */
+
+.title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  background-color: #0a0a0a;
+  border-bottom: 1px solid var(--matrix-green-dark);
+  -webkit-app-region: drag;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.title-bar-drag-region {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding-left: var(--spacing-md);
+  height: 100%;
+}
+
+.title-bar-title {
+  color: var(--matrix-green);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.title-bar-controls {
+  display: flex;
+  -webkit-app-region: no-drag;
+}
+
+.title-bar-btn {
+  width: 46px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--matrix-green-dim);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.title-bar-btn:hover {
+  background-color: rgba(0, 255, 0, 0.1);
+  color: var(--matrix-green);
+}
+
+.title-bar-btn:active {
+  background-color: rgba(0, 255, 0, 0.2);
+}
+
+.title-bar-btn.close:hover {
+  background-color: #c42b1c;
+  color: white;
+}
+
+.title-bar-btn.close:active {
+  background-color: #a82a1c;
+}
+
+.title-bar-btn span {
+  line-height: 1;
+}

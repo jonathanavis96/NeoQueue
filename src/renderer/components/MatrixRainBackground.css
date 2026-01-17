@@ -1,0 +1,13 @@
+/* Matrix Rain Background - full screen effect that shows through transparent UI areas */
+.matrix-rain-background {
+  position: fixed;
+  top: 32px; /* Below title bar (minimize/close buttons) */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: calc(100vh - 32px); /* Explicit height for canvas sizing */
+  z-index: 5; /* Between body background and UI elements (header/main are z-index: 10) */
+  pointer-events: none;
+  /* Canvas is transparent - only the rain characters are drawn */
+}

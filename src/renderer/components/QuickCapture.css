@@ -1,13 +1,15 @@
 /* QuickCapture component styles */
 .quick-capture {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: var(--spacing-md);
   background-color: var(--matrix-dark);
   border: 1px solid var(--matrix-green-dark);
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-lg);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: text;
+  min-height: 120px;
 }
 
 .quick-capture:focus-within {
@@ -21,6 +23,7 @@
   font-weight: bold;
   margin-right: var(--spacing-sm);
   flex-shrink: 0;
+  padding-top: 2px;
 }
 
 .quick-capture-input-wrap {
@@ -36,8 +39,10 @@
   color: var(--matrix-green);
   font-family: var(--font-mono);
   font-size: 14px;
-  outline: none;
-  caret-color: transparent; /* Hide default cursor, we use custom one */
+  line-height: 1.5;
+  outline: none !important; /* Prevent global focus outline - parent handles focus styling */
+  resize: none;
+  min-height: 100px;
 }
 
 .quick-capture-input::placeholder {
@@ -47,27 +52,6 @@
 
 .quick-capture-input:disabled {
   opacity: 0.5;
-}
-
-.quick-capture-cursor {
-  color: var(--matrix-green);
-  font-weight: bold;
-  opacity: 0;
-  animation: blink 1s infinite;
-}
-
-.quick-capture-cursor.active {
-  opacity: 1;
-}
-
-@keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
-}
-
-/* Override cursor visibility when input has focus */
-.quick-capture:focus-within .quick-capture-cursor {
-  opacity: 1;
 }
 
 /* Visually hidden but accessible to screen readers */

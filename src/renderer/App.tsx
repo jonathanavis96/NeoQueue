@@ -1,10 +1,9 @@
 import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import './styles/App.css';
 import { useQueueData, useKeyboardShortcuts, useUiEffects, useExperimentalFlags } from './hooks';
-import { QuickCapture, SearchBox, QueueItemList, HelpPanel, CanvasView } from './components';
+import { QuickCapture, SearchBox, QueueItemList, HelpPanel, TitleBar, CommandsDropdown, MatrixRainBackground } from './components';
 import type { QuickCaptureRef } from './components/QuickCapture';
 import type { SearchBoxRef } from './components/SearchBox';
-import type { CanvasViewRef } from './components/CanvasView';
 
 const HELP_DISMISSED_KEY = 'neoqueue.help.dismissed';
 
@@ -20,8 +19,7 @@ const App: React.FC = () => {
     deleteItem,
     addFollowUp,
     updateItem,
-    canvasPositions,
-    setCanvasPosition,
+    reorderItems,
     exportJson,
     exportMarkdown,
     exportJsonScoped,
@@ -31,30 +29,27 @@ const App: React.FC = () => {
     importJson,
     canUndo,
     undo,
+    commands,
+    addCommand,
+    editCommand,
+    deleteCommand,
+    reorderCommands,
   } = useQueueData();
 
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'queue' | 'discussed'>('queue');
+  const [matrixRainEnabled, setMatrixRainEnabled] = useState(false);
+  const [matrixRainIntensity, setMatrixRainIntensity] = useState(15);
 
   const { flags: experimentalFlags, setFlag: setExperimentalFlag } = useExperimentalFlags();
-
-  const [activeView, setActiveView] = useState<'list' | 'canvas'>(() => (experimentalFlags.canvas ? 'canvas' : 'list'));
-
-  // If Canvas is turned off while the user is on it, bounce back to list.
-  useEffect(() => {
-    if (!experimentalFlags.canvas && activeView === 'canvas') {
-      setActiveView('list');
-    }
-  }, [activeView, experimentalFlags.canvas]);
 
   const [isStartupBannerVisible, setIsStartupBannerVisible] = useState(false);
   const [startupBannerText, setStartupBannerText] = useState('');
 
   // Refs for programmatic focus
   const quickCaptureRef = useRef<QuickCaptureRef>(null);
-  const canvasRef = useRef<CanvasViewRef>(null);
   const searchRef = useRef<SearchBoxRef>(null);
   const hasShownStartupBannerRef = useRef(false);
 
@@ -69,27 +64,8 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Sync "Always on top" state from the main process (single source of truth).
-  useEffect(() => {
-    let isMounted = true;
-
-    const load = async () => {
-      if (!window.electronAPI?.getAlwaysOnTop) return;
-
-      try {
-        const enabled = await window.electronAPI.getAlwaysOnTop();
-        if (isMounted) setIsAlwaysOnTop(Boolean(enabled));
-      } catch {
-        // If unavailable (e.g., during web-only rendering), leave default.
-      }
-    };
-
-    void load();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  // PIN state is now manual only - just a visual reminder toggle
+  // No automatic detection since PowerToys controls the actual always-on-top state
 
   // Lightweight startup notification banner (in-app)
   useEffect(() => {
@@ -122,18 +98,12 @@ const App: React.FC = () => {
 
   // Handler for new item shortcut - focus the input
   const handleNewItemShortcut = useCallback(() => {
-    if (activeView === 'canvas') {
-      canvasRef.current?.openNewItemAtCenter();
-      return;
-    }
     quickCaptureRef.current?.focus();
-  }, [activeView]);
+  }, []);
 
   const handleFindShortcut = useCallback(() => {
-    // Search only applies to list mode.
-    if (activeView === 'canvas') return;
     searchRef.current?.focus();
-  }, [activeView]);
+  }, []);
 
   const handleUndo = useCallback(async () => {
     if (!canUndo) return;
@@ -142,15 +112,12 @@ const App: React.FC = () => {
   }, [canUndo, triggerPulse, undo]);
 
   const handleEscape = useCallback(() => {
-    // Search only exists in list mode.
-    if (activeView === 'canvas') return;
-
     // Prefer clearing search first (if active), otherwise no-op.
     if (searchQuery.trim().length > 0) {
       setSearchQuery('');
       searchRef.current?.focus();
     }
-  }, [activeView, searchQuery]);
+  }, [searchQuery]);
 
   const handleTabChange = useCallback((tab: 'queue' | 'discussed') => {
     // THOUGHTS.md: search persists within a tab and clears on tab switch.
@@ -212,6 +179,8 @@ const App: React.FC = () => {
       role="application"
       aria-label="NeoQueue - Discussion Tracker"
     >
+      {matrixRainEnabled && <MatrixRainBackground intensity={matrixRainIntensity} />}
+      <TitleBar title="NeoQueue" />
       <header className="app-header">
         <div className="app-header-row">
           <div>
@@ -219,66 +188,39 @@ const App: React.FC = () => {
             <p className="app-subtitle">tracking discussion points</p>
           </div>
           <div className="app-header-actions">
-            {experimentalFlags.canvas && (
-              <div className="app-view-toggle" role="group" aria-label="View">
-                <button
-                  type="button"
-                  className={`app-view-toggle-btn ${activeView === 'list' ? 'active' : ''}`}
-                  onClick={() => setActiveView('list')}
-                  aria-pressed={activeView === 'list'}
-                >
-                  List
-                </button>
-                <button
-                  type="button"
-                  className={`app-view-toggle-btn ${activeView === 'canvas' ? 'active' : ''}`}
-                  onClick={() => setActiveView('canvas')}
-                  aria-pressed={activeView === 'canvas'}
-                >
-                  Canvas
-                </button>
-              </div>
-            )}
-            {activeView === 'list' && (
-              <SearchBox
-                ref={searchRef}
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onClear={() => setSearchQuery('')}
-                disabled={isLoading}
-              />
-            )}
-            <button
-              type="button"
-              className={`app-help-button app-pin-button ${isAlwaysOnTop ? 'is-pinned' : ''}`}
-              onClick={async () => {
-                if (!window.electronAPI?.setAlwaysOnTop) return;
-
-                try {
-                  const next = !isAlwaysOnTop;
-                  const res = await window.electronAPI.setAlwaysOnTop(next);
-                  if (res?.success) setIsAlwaysOnTop(Boolean(res.enabled));
-                } catch {
-                  // No-op; keep existing state.
-                }
+            <SearchBox
+              ref={searchRef}
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onClear={() => setSearchQuery('')}
+              disabled={isLoading}
+            />
+            <CommandsDropdown
+              commands={commands.map((c) => ({ id: c.id, text: c.text }))}
+              onAddCommand={addCommand}
+              onEditCommand={editCommand}
+              onDeleteCommand={deleteCommand}
+              onReorderCommands={(newCmds) => {
+                // Map back to SavedCommand with createdAt
+                const reordered = newCmds.map((cmd) => {
+                  const original = commands.find((c) => c.id === cmd.id);
+                  return original || { ...cmd, createdAt: new Date() };
+                });
+                void reorderCommands(reordered);
               }}
-              aria-label={isAlwaysOnTop ? 'Disable always-on-top' : 'Enable always-on-top'}
-              title={isAlwaysOnTop ? 'Always on top: ON' : 'Always on top: OFF'}
-            >
-              <span className="app-pin-glyph" aria-hidden="true">{isAlwaysOnTop ? 'PIN' : 'TOP'}</span>
-            </button>
-            <button
-              type="button"
-              className="app-help-button"
-              onClick={async () => {
-                await handleUndo();
-              }}
-              aria-label="Undo last action"
-              disabled={!canUndo}
-              title="Undo (Ctrl/Cmd+Z)"
-            >
-              Undo
-            </button>
+            />
+            <div className="app-pin-container">
+              <button
+                type="button"
+                className={`app-pin-button ${isAlwaysOnTop ? 'is-pinned' : ''}`}
+                onClick={() => setIsAlwaysOnTop((prev) => !prev)}
+                aria-label={isAlwaysOnTop ? 'Window is pinned on top (click to unmark)' : 'Window is not pinned (click to mark)'}
+                title="Click to toggle pin reminder"
+              >
+                PIN
+              </button>
+              <span className="app-pin-hint">Win+Ctrl+T</span>
+            </div>
             <button
               type="button"
               className="app-help-button"
@@ -293,7 +235,15 @@ const App: React.FC = () => {
 
       <HelpPanel
         isOpen={isHelpOpen}
-        onClose={() => setIsHelpOpen(false)}
+        onClose={() => {
+          // Any close action dismisses the help panel for future sessions
+          try {
+            window.localStorage.setItem(HELP_DISMISSED_KEY, 'true');
+          } catch {
+            // ignore
+          }
+          setIsHelpOpen(false);
+        }}
         onDismissForever={() => {
           try {
             window.localStorage.setItem(HELP_DISMISSED_KEY, 'true');
@@ -381,26 +331,19 @@ const App: React.FC = () => {
         onToggleExperimentalFlag={(key, enabled) => {
           void setExperimentalFlag(key, enabled);
         }}
+        matrixRainEnabled={matrixRainEnabled}
+        matrixRainIntensity={matrixRainIntensity}
+        onToggleMatrixRain={setMatrixRainEnabled}
+        onChangeMatrixRainIntensity={setMatrixRainIntensity}
       />
 
       <main className="app-main" role="main">
-        {activeView === 'list' ? (
-          <QuickCapture
-            ref={quickCaptureRef}
-            onAdd={addItemWithFx}
-            dictionary={dictionaryTokens}
-            disabled={isLoading}
-          />
-        ) : (
-          <CanvasView
-            ref={canvasRef}
-            items={items}
-            positions={canvasPositions}
-            onMoveItem={setCanvasPosition}
-            onAddItem={addItemWithFx}
-            isLoading={isLoading}
-          />
-        )}
+        <QuickCapture
+          ref={quickCaptureRef}
+          onAdd={addItemWithFx}
+          dictionary={dictionaryTokens}
+          disabled={isLoading}
+        />
 
         {isStartupBannerVisible && (
           <div className="startup-banner" role="status" aria-live="polite">
@@ -423,31 +366,26 @@ const App: React.FC = () => {
           </div>
         )}
         
-        {activeView === 'list' && (
-          <QueueItemList
-            items={filteredItems}
-            dictionary={dictionaryTokens}
-            hasUnfilteredItems={items.length > 0}
-            hasActiveSearch={hasActiveSearch}
-            onTabChange={handleTabChange}
-            onToggleComplete={toggleComplete}
-            onDelete={deleteItem}
-            onAddFollowUp={addFollowUp}
-            onUpdateItem={updateItem}
-            isLoading={isLoading}
-          />
-        )}
+        <QueueItemList
+          items={filteredItems}
+          dictionary={dictionaryTokens}
+          hasUnfilteredItems={items.length > 0}
+          hasActiveSearch={hasActiveSearch}
+          onTabChange={handleTabChange}
+          onToggleComplete={toggleComplete}
+          onDelete={deleteItem}
+          onAddFollowUp={addFollowUp}
+          onUpdateItem={updateItem}
+          onReorderItems={reorderItems}
+          isLoading={isLoading}
+        />
       </main>
       
       {/* Keyboard shortcuts hint */}
       <div className="app-shortcuts-hint" aria-hidden="true">
         <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>Z</kbd> Undo &nbsp;|&nbsp;
         <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>N</kbd> New item &nbsp;|&nbsp;
-        {activeView === 'list' && (
-          <>
-            <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>F</kbd> Search &nbsp;|&nbsp;
-          </>
-        )}
+        <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>F</kbd> Search &nbsp;|&nbsp;
         <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>Shift</kbd>+<kbd>Q</kbd> Toggle window
       </div>
     </div>
