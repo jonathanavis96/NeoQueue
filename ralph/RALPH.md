@@ -59,8 +59,8 @@ See `PROMPT.md` (building mode section) for full instructions.
 
 When all work is complete, Ralph outputs:
 
-```xml
-<promise>COMPLETE</promise>
+```
+:::COMPLETE:::
 ```
 
 The loop runner detects this sentinel and stops iteration.

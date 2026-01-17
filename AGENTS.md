@@ -1,164 +1,111 @@
-# NeoQueue - Agent Operational Guide
+# Project Guidance for AI Agents
 
-## Project Overview
+## Knowledge Base (MUST USE)
 
-**NeoQueue** is a Matrix-inspired Electron desktop app for tracking discussion points with your manager.
+### Progressive Disclosure: Always Read in This Order
 
-**Stack**: Electron + React + TypeScript + Vite
+**ALWAYS start here:**
+1. `../../brain/kb/SUMMARY.md` - Knowledge base overview and usage guide
+2. `../../brain/references/react-best-practices/HOTLIST.md` - Top 10 most applicable performance rules (covers 80% of scenarios)
 
-## Directory Structure
+**Only if HOTLIST doesn't cover your scenario:**
+3. `../../brain/references/react-best-practices/INDEX.md` - Full categorized rule index (find specific categories)
 
-```
-neoqueue/
-├── src/
-│   ├── main/           # Electron main process
-│   │   └── main.ts     # Entry point, window creation, IPC
-│   ├── renderer/       # React frontend
-│   │   ├── index.tsx   # React entry point
-│   │   ├── App.tsx     # Root component
-│   │   ├── components/ # UI components
-│   │   ├── hooks/      # Custom React hooks
-│   │   ├── styles/     # CSS/theme files
-│   │   └── types/      # TypeScript interfaces
-│   └── shared/         # Shared between main/renderer
-│       └── types.ts    # Common type definitions
-├── public/             # Static assets
-├── ralph/              # Ralph loop files
-│   ├── PROMPT.md
-│   ├── RALPH.md
-│   ├── IMPLEMENTATION_PLAN.md
-│   └── VALIDATION_CRITERIA.md
-├── THOUGHTS.md         # Project vision
-├── AGENTS.md           # This file
-├── README.md           # Setup instructions
-└── package.json
-```
+**Only when you need deep knowledge on a specific topic:**
+4. `../../brain/references/react-best-practices/rules/*` - Individual rule files (read ONLY specific rules you need)
 
-## Development Commands
+❌ **NEVER scan all 45 rules by default** - Token-inefficient and slow  
+✅ **Use the hierarchy above** - Fast and targeted  
+✅ **Only open specific rule files when needed for the task** - don't read everything "just in case"
 
-```bash
-# Install dependencies
-npm install
+### Why This Order Matters
+- **Token efficiency**: HOTLIST covers most common scenarios with minimal tokens
+- **Faster results**: Start broad, drill down only when needed
+- **Avoid overwhelm**: Don't read all rules unless explicitly instructed
 
-# Development mode (launches Electron with hot reload)
-npm run dev
+## Knowledge Growth Rule (Mandatory)
 
-# Type checking
-npm run type-check
+When you discover a new convention, architectural decision, or project-specific pattern:
 
-# Linting
-npm run lint
+1. **Create a KB file** in the brain repo:
+   - Project-specific: `../../brain/kb/projects/<project-slug>.md`
+   - Domain/cross-project: `../../brain/kb/domains/<domain>.md`
 
-# Build for production
-npm run build
+2. **Update the index**: Add a link in `../../brain/kb/SUMMARY.md`
 
-# Package for distribution
-npm run package
-```
+3. **Structure new KB files** with:
+   ```markdown
+   # [Title]
+   
+   ## Why This Exists
+   [Explain the problem this solves or decision rationale]
+   
+   ## When to Use It
+   [Specific scenarios or conditions for applying this knowledge]
+   
+   ## Details
+   [The actual knowledge, patterns, conventions, etc.]
+   ```
 
-## Key Files
+## Parallelism Rule
 
-| File | Purpose |
-|------|---------|
-| `src/main/main.ts` | Electron main process, creates window |
-| `src/renderer/App.tsx` | React root component |
-| `src/shared/types.ts` | QueueItem, FollowUp interfaces |
-| `vite.config.ts` | Vite bundler configuration |
-| `electron-builder.json` | Packaging configuration |
+**Reading/searching/spec review**: Use up to **100 parallel subagents** for maximum efficiency
+- File reading, searching, spec analysis, documentation review
+- Gathering context from multiple sources simultaneously
 
-## Data Model
+**Build/tests/benchmarks**: Use exactly **1 agent**
+- Running build commands, executing tests, benchmarks
+- Making file modifications and commits
 
-```typescript
-interface QueueItem {
-  id: string;
-  text: string;
-  createdAt: Date;
-  completedAt?: Date;
-  isCompleted: boolean;
-  followUps: FollowUp[];
-}
+## Core Principles
 
-interface FollowUp {
-  id: string;
-  text: string;
-  createdAt: Date;
-}
-```
+### Before Making Changes
+1. **Search the codebase** - Don't assume anything is missing; search first
+2. **Read targeted knowledge** - Follow the hierarchy: SUMMARY → HOTLIST → specific rules
+3. **Check existing patterns** - Look for established conventions in the codebase before inventing new ones
 
-## Conventions
+### Code Quality
+- Prefer standard patterns from the knowledge base over custom solutions
+- Keep components small and focused
+- Write clear, self-documenting code with minimal comments
 
-### Code Style
-- **TypeScript strict mode**: No `any` without justification
-- **Functional components**: No class components
-- **Hooks**: Use custom hooks for shared logic
-- **Naming**: PascalCase for components, camelCase for functions/variables
-
-### CSS/Styling
-- CSS variables for theme colors
-- Matrix theme colors:
-  - Background: `#0a0a0a` (near black)
-  - Primary green: `#00ff00` (classic Matrix green)
-  - Secondary green: `#003300` (dark green)
-  - Text: `#00ff00` or `#00cc00`
-  - Font: `'Fira Code', 'Consolas', monospace`
-
-### Component Structure
-```tsx
-// ComponentName.tsx
-import React from 'react';
-import './ComponentName.css';
-
-interface ComponentNameProps {
-  // props
-}
-
-export const ComponentName: React.FC<ComponentNameProps> = ({ props }) => {
-  // hooks first
-  // handlers
-  // render
-  return <div>...</div>;
-};
-```
-
-## Testing Approach
-
-- Manual testing during development
-- Focus on core user flows:
-  1. Add item → verify appears in list
-  2. Copy item → verify clipboard
-  3. Add follow-up → verify threaded display
-  4. Mark complete → verify moves/archives
-  5. Restart app → verify persistence
-
-## Validation
-
-Before committing, verify:
-1. `npm run type-check` passes
-2. App launches without errors
-3. Changed feature works as expected
-4. No console errors in DevTools
+### Project Structure
+- Prefer `src/` for source code (document actual location if different)
+- Keep project goals and vision in `THOUGHTS.md`
+- Maintain `ralph/IMPLEMENTATION_PLAN.md` as a prioritized task list
 
 ## Ralph Integration
 
-This project uses Ralph for iterative development:
-- **IMPLEMENTATION_PLAN.md**: Task list (read first every iteration)
-- **VALIDATION_CRITERIA.md**: Quality gates
-- **THOUGHTS.md**: Project vision and success criteria
-- **One task per iteration**: Implement, validate, commit, stop
+This project uses the Ralph Wiggum iterative loop for systematic development:
+- **Single unified prompt**: See `ralph/PROMPT.md` (determines mode from iteration number)
+- **Progress tracking**: All work logged in `ralph/progress.txt`
+- **Completion**: Look for `:::COMPLETE:::` sentinel
 
-## Troubleshooting
+## RovoDev + CLI Guardrails
 
-### Electron won't start
-- Check `npm install` completed
-- Verify Node.js version (18+ recommended)
-- Check main process file path in package.json
+When working with RovoDev and Atlassian CLI:
 
-### Hot reload not working
-- Vite dev server must be running
-- Check vite.config.ts renderer configuration
-- Restart dev command
+- **Always run repo scripts with PowerShell 7** (`pwsh`), not Windows PowerShell 5.1 (`powershell.exe`)
+- **If Ralph/RovoDev appears to "hang" or "wait"**, first run:
+  - `acli rovodev auth status`
+  - `acli rovodev usage site` (select a valid site if prompted)
+  - then retry
+- **Don't assume the correct site is the one open in the browser** - rely on CLI-selected site
+- **If a command needs interactivity**, the agent must clearly tell the user what input/action is required
+- **Avoid long-running background watchers/polling** unless the user explicitly wants it - prefer short, bounded runs
 
-### TypeScript errors
-- Run `npm run type-check` for full report
-- Check tsconfig.json paths
-- Ensure all imports have type definitions
+### Secrets and Tokens
+
+- **Never paste API tokens, secrets, or credentials** into logs, markdown, or console output
+- Use placeholders like `PASTE_TOKEN_HERE` and instruct the user to provide them locally
+
+### UTF-8 Logging
+
+- **Any PowerShell file writes must explicitly use UTF-8**:
+  - `Out-File -Encoding utf8`
+  - `Add-Content -Encoding utf8` (or equivalent)
+- Avoid UTF-16 defaults that cause NUL spam in VS Code
+
+## Project-Specific Notes
+
+[Add project-specific conventions, architecture decisions, and patterns here]

@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 16:38:08
+Last updated: 2026-01-17 17:02:15
 
 ## Current State
 
@@ -50,41 +50,23 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
 
 ## Prioritized Tasks
 
-### High Priority
+**Status: All planned tasks complete. NeoQueue v1 is feature-complete and ready for packaging/distribution.**
 
-- [x] **Task 28:** Matrix-flavored empty states (Queue + Discussed) without harming “No Results” messaging
-  - Keep current behavior when a search filter yields zero results.
-  - Only adjust the *true empty* states to match THOUGHTS.md vibe (e.g., “The Queue is clear. There is no spoon.”).
+### Completed High Priority
 
-### Medium Priority
+- [x] **Task 28:** Matrix-flavored empty states (Queue + Discussed) without harming "No Results" messaging
+
+### Completed Medium Priority
 
 - [x] **Task 29:** Date-range export (optional but requested in THOUGHTS.md)
-  - Add export option(s) to filter items by `createdAt` and/or `completedAt`.
-  - Keep current All/Active/Discussed export flows unchanged.
-  - Include validation for invalid/empty ranges.
-
 - [x] **Task 30:** Make secondary backup location configurable (opt-in)
-  - Current: always writes to `Documents/NeoQueue Backups/backup-latest.json` (best-effort).
-  - Target: allow an optional user-specified directory (and potentially support the legacy `/mnt/e/...` path when present).
-  - Must remain non-blocking: backup failures never break saves.
 
-### Low Priority (future direction)
+### Completed Low Priority (future direction)
 
 - [x] **Task 31:** Persist experimental flags as user settings (not only env vars)
-  - Allow toggling Canvas / Autocomplete from a settings UI.
-  - Store via `electron-store` so it participates in export/import/backup.
-
 - [x] **Task 32:** Canvas prototype v2 (layout persistence + basic drag)
-  - Persist node positions; keep the underlying `QueueItem` model.
-  - Maintain keyboard-first flows.
-
 - [x] **Task 33:** Align search behavior with THOUGHTS.md (optional)
-  - Current: one global search query for the list view; does not clear on tab switch; searches item + follow-up text only.
-  - Target: per-tab persisted search (clears when switching tabs) and optionally include timestamps in matches.
-
 - [x] **Task 34:** Inline edit of item text (optional)
-  - Add a minimal, safe “double-click to edit” flow for Queue items.
-  - Reuse existing `updateItem` plumbing; preserve keyboard-first ergonomics.
 
 ## Discoveries & Notes
 
@@ -130,6 +112,24 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
 **2026-01-17 (Build): Task 34 complete**
 - Added inline edit for active queue items via double-click.
 - Edit input commits on Enter/blur and cancels on Escape; empty edits revert to original text.
+
+**2026-01-17 (Planning update): All tasks complete**
+- Comprehensive gap analysis performed: all high/medium/low priority tasks from previous plan are now complete.
+- Code quality verified: `npm run type-check` passes, `npm run lint` passes, `npm run build` succeeds.
+- No TODOs, FIXMEs, or technical debt markers found in codebase.
+- Current implementation aligns with THOUGHTS.md MVP goals:
+  - List-first capture workflow ✅
+  - Two-tab interface (Queue/Discussed) ✅
+  - Copy + follow-up ergonomics ✅
+  - Matrix theme + tasteful effects ✅
+  - Keyboard shortcuts + global hotkeys ✅
+  - System tray integration ✅
+  - Data persistence + backups ✅
+  - Export/import (JSON + Markdown) ✅
+  - Search/filter ✅
+  - Undo ✅
+  - Experimental prototypes (Canvas, Autocomplete) ✅
+- **Next step:** Package and distribute NeoQueue v1.
 
 ---
 

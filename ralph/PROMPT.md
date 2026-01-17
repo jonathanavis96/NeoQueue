@@ -17,7 +17,7 @@ If unclear, assume BUILDING mode (safer default - reads plan without modifying i
 **ABSOLUTE RULES:**
 - **NO IMPLEMENTATION** - Do not write code, do not modify files (except IMPLEMENTATION_PLAN.md)
 - **NO COMMITS** - Do not commit anything
-- **NO `<promise>COMPLETE</promise>`** - Never output this in planning mode
+- **NO `:::COMPLETE:::`** - Never output this in planning mode
 - **ANALYSIS ONLY** - Study existing files, create prioritized plan
 
 ### Your Job: Gap Analysis & Planning
@@ -64,7 +64,7 @@ Last updated: YYYY-MM-DD HH:MM:SS
 ```
 
 **Step 4: Stop**
-After updating IMPLEMENTATION_PLAN.md, stop. Do NOT output `<promise>COMPLETE</promise>`.
+After updating IMPLEMENTATION_PLAN.md, stop. Do NOT output `:::COMPLETE:::`.
 
 ---
 
@@ -208,7 +208,7 @@ Do not:
 The only exception:
 If you need to check whether to output the completion sentinel, quickly verify if any unchecked `[ ]` tasks remain in IMPLEMENTATION_PLAN.md:
 - If ANY tasks remain: Simply stop (no sentinel output)
-- If ZERO tasks remain: Output `<promise>COMPLETE</promise>` and then stop
+- If ZERO tasks remain: Output `:::COMPLETE:::` and then stop
 
 ### Stop Condition
 
@@ -220,7 +220,7 @@ After committing one task, simply stop generating output. The bash loop will:
 3. Restart you for the next task
 
 DO NOT:
-- Output `<promise>COMPLETE</promise>` after a single task
+- Output `:::COMPLETE:::` after a single task
 - Check if more work remains
 - Decide whether to continue
 
@@ -235,7 +235,7 @@ The loop will restart you with fresh context. When you start a new iteration:
 3. **IF you find ZERO unchecked tasks**, output:
 
 ```xml
-<promise>COMPLETE</promise>
+:::COMPLETE:::
 ```
 
 4. **IF you find ANY unchecked tasks**, pick the first one and implement it (do NOT output the sentinel)

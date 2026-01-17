@@ -7,14 +7,12 @@ A Matrix-inspired desktop app for tracking discussion points you need to raise w
 **NeoQueue** is a personal comment/note management system designed for tracking items you need to discuss with your manager. It provides a distraction-free, cyberpunk-styled interface for quickly capturing, organizing, and completing discussion points.
 
 - **Primary Goal:** Rapidly capture and track "still to chat with manager" items with minimal friction
-- **Key Features (v1 shipped):**
-  - **List-first capture** (type → Enter) optimized for speed
-  - One-click copy **and** right-click copy + auto follow-up
-  - Threaded follow-ups (indented)
-  - Two-tab workflow: **Queue** → **Discussed**
+- **Key Features:**
+  - Canvas-based comment creation (left-click anywhere → new comment)
+  - One-click copy with auto follow-up (right-click → copies text + opens follow-up box)
+  - Threaded follow-ups with visual linking (indented, connected lines)
+  - Two-tab workflow: Active Queue → Completed Archive
   - Matrix-inspired dark theme with tasteful glitch effects on actions
-
-> **Note (2026-01):** This document started as a *canvas-first* design. The current app intentionally ships a **list-first** UX for v1. The canvas concept remains a possible future direction, but is not required for MVP value.
 - **Target Users:** Single user (personal tool)
 - **Platform:** Desktop application (Electron + React or Tauri + React)
 
@@ -28,39 +26,40 @@ A Matrix-inspired desktop app for tracking discussion points you need to raise w
 
 ## Current Goals
 
-### Active Focus: Maintain a Practical, Polished MVP (v1)
+### Active Focus: Build Complete MVP
 
-The app is intentionally **list-first** (fast capture + low cognitive load). The canvas-first ideas below are still interesting, but are **not** required for v1.
+Create a fully functional desktop application with all core features:
 
-Core features for v1:
-
-1. **Core Queue System (list-first)**
-   - Type into the capture input → press Enter to add
-   - Expand items to view/edit follow-ups
+1. **Core Comment System**
+   - Left-click on canvas → opens new comment input box (auto-focused)
+   - Single text block comments (no title, just content)
+   - Double-click existing comment → edit mode
+   - Auto-save on blur/enter
+   - Smart auto-correct that respects code/filenames (e.g., `AGENTS.md`, `loop.sh`)
+   - Tab autocomplete for commonly used words (learns from your typing)
 
 2. **Copy & Follow-up Workflow**
-   - One-click copy button on an item
-   - Right-click on an item → copies text + opens follow-up input (optional ergonomics)
+   - Right-click on comment → selects entire text + copies to clipboard
+   - Visual feedback: "Copied!" indicator with Matrix-style glitch effect
+   - After copy: new follow-up input box appears below, indented with connecting line
+   - Follow-ups are visually linked to parent (thread structure)
 
 3. **Completion Workflow**
-   - Mark item as discussed → moves to **Discussed** tab
-   - Undo: restore accidentally discussed items back to Queue
+   - Checkbox at bottom of each comment card
+   - Click checkbox → Matrix glitch animation → card slides to "Completed" tab
+   - Completed tab shows archived items (searchable, read-only by default)
+   - Undo: restore accidentally completed items back to Queue
 
 4. **Two-Tab Interface**
-   - **Queue** (default): Active items awaiting discussion
-   - **Discussed**: Archived items (separate, not cluttering main view)
+   - **Queue** (default): Active comments awaiting discussion
+   - **Completed**: Archived comments (separate, not cluttering main view)
 
 5. **Matrix Dark Theme**
    - Black background with green phosphor text (#00FF00 or similar)
    - Monospace font (Fira Code, JetBrains Mono, or Source Code Pro)
    - Subtle scanline/CRT effect (optional, toggleable)
-   - Glitch effects triggered on: copy, discussed, new item added
+   - Glitch effects triggered on: copy, complete, new comment added
    - NOT overkill - tasteful, not distracting during normal use
-
-Future direction (optional):
-- Canvas click-to-create
-- Double-click edit in-place
-- Code-aware autocorrect + learned autocomplete
 
 ---
 
@@ -178,9 +177,9 @@ A feature in NeoQueue is complete when:
 
 NeoQueue is successful when:
 
-1. **Capture is instant** - Focus capture input → typing in < 0.5 seconds
-2. **Copy workflow is seamless** - Copy (button or right-click) + follow-up ready in < 1 second
-3. **Zero data loss** - All items persist, backups work, undo available
+1. **Capture is instant** - Left-click → typing in < 0.5 seconds
+2. **Copy workflow is seamless** - Right-click → copied + follow-up ready in < 1 second
+3. **Zero data loss** - All comments persist, backups work, undo available
 4. **Visually distinctive** - Immediately recognizable Matrix aesthetic
 5. **Always accessible** - Global hotkey brings app to focus instantly
 6. **Non-intrusive** - Effects enhance, don't distract; app stays out of the way when not needed

@@ -112,41 +112,61 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Resolve model shortcut to full model ID
+# Model version configuration - SINGLE SOURCE OF TRUTH
+# Update these when new model versions are released
+# Last updated: 2026-01-17 (Sonnet 4.5 September 2025 release)
+MODEL_SONNET_45="anthropic.claude-sonnet-4-5-20250929-v1:0"
+MODEL_OPUS_45="anthropic.claude-opus-4-5-20251101-v1:0"
+MODEL_SONNET_4="anthropic.claude-sonnet-4-20250514-v1:0"
+
+# Default to Sonnet 4.5 for Ralph loops (Opus is global default for interactive)
+DEFAULT_MODEL="$MODEL_SONNET_45"
+
 resolve_model() {
   local model="$1"
   case "$model" in
-    opus)
-      echo "anthropic.claude-opus-4-5-20251101-v1:0" ;;
-    sonnet)
-      echo "anthropic.claude-sonnet-4-20250514-v1:0" ;;
+    opus|opus4.5|opus45)
+      echo "$MODEL_OPUS_45" ;;
+    sonnet|sonnet4.5|sonnet45)
+      echo "$MODEL_SONNET_45" ;;
+    sonnet4)
+      echo "$MODEL_SONNET_4" ;;
+    latest|auto)
+      # Use system default - don't override config
+      echo "" ;;
     *)
       echo "$model" ;;
   esac
 }
 
-# Setup model config if specified
+# Setup model config - default to Sonnet 4.5 for Ralph loops
 CONFIG_FLAG=""
 TEMP_CONFIG=""
-if [[ -n "$MODEL_ARG" ]]; then
-  RESOLVED_MODEL="$(resolve_model "$MODEL_ARG")"
+
+# Use provided model or default to Sonnet 4.5
+if [[ -z "$MODEL_ARG" ]]; then
+  MODEL_ARG="sonnet"  # Default for Ralph loops
+fi
+
+RESOLVED_MODEL="$(resolve_model "$MODEL_ARG")"
+
+# Only create temp config if we have a model to set
+if [[ -n "$RESOLVED_MODEL" ]]; then
   TEMP_CONFIG="/tmp/rovodev_config_$$_$(date +%s).yml"
   
   # Copy base config and override modelId
   if [[ -f "$HOME/.rovodev/config.yml" ]]; then
-    # Use sed to replace modelId in a copy of the config
     sed "s|^  modelId:.*|  modelId: $RESOLVED_MODEL|" "$HOME/.rovodev/config.yml" > "$TEMP_CONFIG"
   else
-    # Create minimal config with just the model
-    cat > "$TEMP_CONFIG" <<EOF
+    cat > "$TEMP_CONFIG" <<EOFCONFIG
 version: 1
 agent:
   modelId: $RESOLVED_MODEL
-EOF
+EOFCONFIG
   fi
   CONFIG_FLAG="--config-file $TEMP_CONFIG"
   echo "Using model: $RESOLVED_MODEL"
 fi
-
 # Resolve a prompt path robustly (works from repo root or ralph/)
 resolve_prompt() {
   local p="$1"
@@ -212,7 +232,7 @@ run_once() {
   
   # Check for completion sentinel (strip ANSI codes, require standalone line)
   # Only matches when sentinel appears alone on a line (not in validation/discussion)
-  if sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -qE '^\s*<promise>COMPLETE</promise>\s*$'; then
+  if sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -qE '^\s*:::COMPLETE:::\s*$'; then
     echo ""
     echo "========================================"
     echo "🎉 Ralph signaled completion!"

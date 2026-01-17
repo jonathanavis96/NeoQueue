@@ -1,34 +1,33 @@
-# Dependencies
-node_modules/
 
 # Build output
-dist/
-release/
-out/
-
+# Dependencies
+# Environment
 # IDE
+# Logs
+# OS
+# OS files
+# Ralph progress logs
+# Temporary files
+# TypeScript cache
+*.log
+*.swo
+*.swp
+*.tmp
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*.local
+.env.local
 .idea/
 .vscode/
-*.swp
-*.swo
-
-# OS
-.DS_Store
 Thumbs.db
-
-# Logs
+dist/
 logs/
-*.log
+node_modules/
 npm-debug.log*
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Temporary files
+out/
+ralph/*.log
+ralph/progress.txt
+release/
+tmp_*
 tmp_rovodev_*
-*.tmp
-
-# TypeScript cache
-*.tsbuildinfo
