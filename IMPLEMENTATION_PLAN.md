@@ -51,7 +51,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 ### High Priority (Next Build Iterations)
 
-- [ ] **Task 16:** Data integrity (undo + import)
+- [x] **Task 16:** Data integrity (undo + import)
   - [x] Optional: **undo** (single-step) for the most recent destructive action (complete/restore/delete/add).
     - Keep scope tight: single-step, in-memory history only; clear history on restart.
     - Must be safe with persistence (no corrupt state; graceful if undo fails).
