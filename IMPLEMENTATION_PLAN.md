@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 13:00:40
+Last updated: 2026-01-17 13:02:46
 
 ## Current State
 
@@ -43,7 +43,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - Target: Installable artifacts with correct branding/icons
 
 - [ ] **Task 11:** Documentation & onboarding
-  - [ ] Create `NEURONS.md` codebase map (now that core features exist)
+  - [x] Create `NEURONS.md` codebase map (now that core features exist)
   - [ ] Expand README with at least one screenshot/GIF + troubleshooting notes
   - [ ] Add in-app help/onboarding (minimal: dismissible “how to use” panel)
   - Target: A first-time user can install, understand, and use the app in < 2 minutes
@@ -90,6 +90,9 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 - Note: In WSL, running AppImage may fail due to missing `libfuse.so.2`; verified via `--appimage-extract` that `resources/app.asar` is present and contains the expected main entry.
 
 **2026-01-17 13:00 (Build Iteration):** Task 10 auto-updater decision:
+
+**2026-01-17 13:02 (Build Iteration):**
+- Created `NEURONS.md` codebase map (Task 11.1).
 - **Defer auto-updates for v1**. We currently have no stable publishing channel/URL for update artifacts.
 - Revisit once we choose a channel (e.g., GitHub Releases + `electron-updater`, or an internal feed) and can sign builds appropriately (especially on macOS/Windows).
 
