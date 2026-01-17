@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="NeoQueue UI screenshot placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#050805"/>
+      <stop offset="1" stop-color="#000000"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <style>
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+      .green { fill: #00ff00; }
+      .green2 { fill: #00cc00; }
+      .panel { fill: #071107; stroke: #00ff00; stroke-opacity: .35; }
+      .muted { fill: #0b260b; }
+      .hint { fill: #00ff00; fill-opacity: .8; }
+    </style>
+  </defs>
+
+  <!-- window -->
+  <rect x="0" y="0" width="960" height="540" fill="url(#bg)"/>
+  <rect x="30" y="30" width="900" height="480" rx="10" class="panel"/>
+
+  <!-- title bar -->
+  <rect x="30" y="30" width="900" height="46" rx="10" class="muted"/>
+  <text x="56" y="60" class="mono green" font-size="18" filter="url(#glow)">NeoQueue</text>
+  <text x="860" y="60" class="mono green2" font-size="12">Ctrl+Shift+N</text>
+
+  <!-- quick capture -->
+  <rect x="56" y="100" width="848" height="52" rx="8" class="panel"/>
+  <text x="76" y="132" class="mono hint" font-size="16">Type a discussion point…  (Enter to add)</text>
+
+  <!-- list headers -->
+  <text x="56" y="190" class="mono green" font-size="14">Active</text>
+  <text x="56" y="366" class="mono green" font-size="14">Discussed</text>
+
+  <!-- active items -->
+  <rect x="56" y="210" width="848" height="52" rx="8" class="panel"/>
+  <text x="76" y="242" class="mono green2" font-size="14">1. Ask about promotion timeline</text>
+  <rect x="56" y="272" width="848" height="52" rx="8" class="panel"/>
+  <text x="76" y="304" class="mono green2" font-size="14">2. Clarify Q1 priorities and success metrics</text>
+
+  <!-- discussed items -->
+  <rect x="56" y="386" width="848" height="52" rx="8" class="panel"/>
+  <text x="76" y="418" class="mono green2" font-size="14" fill-opacity=".75">✔ Follow up on last 1:1 action items</text>
+
+  <!-- footer hint -->
+  <text x="56" y="485" class="mono green2" font-size="12" fill-opacity=".7">This is a placeholder image. Replace with a real screenshot/GIF when available.</text>
+</svg>

@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 13:02:46
+Last updated: 2026-01-17 13:04:21
 
 ## Current State
 
@@ -44,8 +44,13 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 - [ ] **Task 11:** Documentation & onboarding
   - [x] Create `NEURONS.md` codebase map (now that core features exist)
-  - [ ] Expand README with at least one screenshot/GIF + troubleshooting notes
-  - [ ] Add in-app help/onboarding (minimal: dismissible “how to use” panel)
+  - [x] Expand README:
+    - Add at least one screenshot/GIF
+    - Add troubleshooting (packaging notes, common startup issues, AppImage/libfuse note)
+    - Update shortcut table to include global shortcuts + tray behavior
+  - [ ] Add in-app help/onboarding (minimal, dismissible):
+    - First-run or manual “How to use” panel
+    - Include: add item, copy, follow-ups, complete, restore after restart, global shortcuts
   - Target: A first-time user can install, understand, and use the app in < 2 minutes
 
 ### Medium Priority (Feature Alignment / UX)
@@ -64,15 +69,16 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - Add short glitch animation on: copy, add item, complete
   - Avoid distraction; keep 60fps.
 
+- [ ] **Task 16:** Data integrity “nice-to-have” (post-v1 unless needed)
+  - Export JSON (and optionally Markdown)
+  - Optional debounced backup to a secondary location (Windows-safe pathing)
+  - Optional undo (even single-step) if it can be implemented safely
+
 ### Low Priority (Bigger Spec Items / Future)
 
 - [ ] **Task 15:** Reconcile THOUGHTS.md “canvas” concept vs current list UI
   - Decide: keep list UI for v1 (recommended) vs implement click-to-create canvas.
   - If keeping list: update THOUGHTS.md to reflect the chosen UX.
-
-- [ ] **Task 16:** Export/backup
-  - Export JSON/Markdown.
-  - Optional debounced backup to a secondary location (ensure Windows-safe pathing).
 
 - [ ] **Task 17:** Window behavior polish
   - Close-to-tray option
@@ -80,9 +86,10 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 ## Discoveries & Notes
 
-**2026-01-17 (Planning):**
-- THOUGHTS.md contains several “aspirational” features (canvas, right-click follow-up, digital rain, export, backup) that are not currently implemented.
-- Core list-based workflow is already strong; recommend focusing on packaging + docs first to ship a usable v1.
+**2026-01-17 (Planning update):**
+- THOUGHTS.md includes several “aspirational” features that diverge from the current shipped UI (canvas, right-click flow, backup/undo/export). Current app is a *list-first* workflow and already satisfies many practical MVP goals.
+- The biggest *user-facing* gap to shipping v1 is onboarding/documentation: README needs screenshots + current shortcut/tray info; app likely needs a minimal in-app “How to use” panel.
+- Data-integrity items in THOUGHTS.md (backup, undo, export) should be treated as post-v1 unless needed; they add complexity and should be tackled carefully.
 
 **2026-01-17 12:59 (Build Iteration):** Task 10 packaging validation complete:
 - Fixed electron-builder entry mismatch by compiling main process during build (`build` now runs `build:electron`) and pointing `package.json#main` at the actual output `dist/main/main/main.js`.
