@@ -12,6 +12,40 @@
   border-bottom: 1px solid var(--matrix-green-dark);
 }
 
+.app-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.app-help-button {
+  font-family: var(--font-mono);
+  background: transparent;
+  color: var(--matrix-green);
+  border: 1px solid var(--matrix-green-dark);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.app-help-button:hover {
+  border-color: var(--matrix-green-dim);
+  opacity: 1;
+}
+
+.app-help-button:focus-visible {
+  outline: 2px solid var(--matrix-green);
+  outline-offset: 2px;
+}
+
 .app-title {
   font-size: 24px;
   font-weight: 700;

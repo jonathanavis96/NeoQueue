@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 13:04:21
+Last updated: 2026-01-17 13:08:12
 
 ## Current State
 
@@ -48,7 +48,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
     - Add at least one screenshot/GIF
     - Add troubleshooting (packaging notes, common startup issues, AppImage/libfuse note)
     - Update shortcut table to include global shortcuts + tray behavior
-  - [ ] Add in-app help/onboarding (minimal, dismissible):
+  - [x] Add in-app help/onboarding (minimal, dismissible):
     - First-run or manual “How to use” panel
     - Include: add item, copy, follow-ups, complete, restore after restart, global shortcuts
   - Target: A first-time user can install, understand, and use the app in < 2 minutes
