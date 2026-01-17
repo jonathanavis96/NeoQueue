@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 13:08:12
+Last updated: 2026-01-17 13:11:59
 
 ## Current State
 
@@ -42,7 +42,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
   - [x] Decide on auto-updater: **Defer for v1** (no distribution channel yet; revisit if publishing via GitHub Releases, S3, or an internal updater feed)
   - Target: Installable artifacts with correct branding/icons
 
-- [ ] **Task 11:** Documentation & onboarding
+- [x] **Task 11:** Documentation & onboarding
   - [x] Create `NEURONS.md` codebase map (now that core features exist)
   - [x] Expand README:
     - Add at least one screenshot/GIF
