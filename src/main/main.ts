@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, nativeImage, dialog, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, nativeImage, dialog, screen, shell } from 'electron';
 import { migrateAppState } from '../shared/migrations';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -59,6 +59,14 @@ type AppSettings = {
    * Why: Some users prefer a "pinned" queue during 1:1s.
    */
   alwaysOnTop: boolean;
+
+  /**
+   * Optional directory for best-effort secondary backups.
+   *
+   * When unset, NeoQueue falls back to a safe cross-platform default under
+   * the user's Documents folder.
+   */
+  secondaryBackupDir?: string;
 };
 
 type WindowState = {
@@ -90,6 +98,7 @@ const store = new Store<StoreSchema>({
     settings: {
       closeToTray: false,
       alwaysOnTop: false,
+      secondaryBackupDir: undefined,
     },
   },
 });
@@ -179,7 +188,7 @@ const getCloseToTraySetting = (): boolean => {
 
 const setCloseToTraySetting = (enabled: boolean): void => {
   store.set('settings', {
-    ...(store.get('settings') ?? { closeToTray: false, alwaysOnTop: false }),
+    ...(store.get('settings') ?? { closeToTray: false, alwaysOnTop: false, secondaryBackupDir: undefined }),
     closeToTray: enabled,
   });
 };
@@ -190,8 +199,16 @@ const getAlwaysOnTopSetting = (): boolean => {
 
 const setAlwaysOnTopSetting = (enabled: boolean): void => {
   store.set('settings', {
-    ...(store.get('settings') ?? { closeToTray: false, alwaysOnTop: false }),
+    ...(store.get('settings') ?? { closeToTray: false, alwaysOnTop: false, secondaryBackupDir: undefined }),
     alwaysOnTop: enabled,
+  });
+};
+
+const setSecondaryBackupDirSetting = (dir?: string): void => {
+  const next = typeof dir === 'string' ? sanitizeDirectoryPath(dir) : undefined;
+  store.set('settings', {
+    ...(store.get('settings') ?? { closeToTray: false, alwaysOnTop: false, secondaryBackupDir: undefined }),
+    secondaryBackupDir: next && next.length > 0 ? next : undefined,
   });
 };
 
@@ -208,10 +225,29 @@ let isQuitting = false;
 let pendingBackupTimer: NodeJS.Timeout | null = null;
 let latestBackupPayload: AppState | null = null;
 
-const getBackupDir = (): string => {
+function sanitizeDirectoryPath(dir: string): string {
+  // Best-effort normalization: trim and strip trailing slashes.
+  return dir.trim().replace(/[\\/]+$/, '');
+}
+
+const getConfiguredBackupDir = (): string | null => {
+  const candidate = store.get('settings')?.secondaryBackupDir;
+  if (!candidate || typeof candidate !== 'string') return null;
+
+  const sanitized = sanitizeDirectoryPath(candidate);
+  if (!sanitized) return null;
+
+  return sanitized;
+};
+
+const getDefaultBackupDir = (): string => {
   // "Documents" is generally user-visible and works well on Windows/macOS/Linux.
   // Using path.join keeps Windows pathing safe.
   return path.join(app.getPath('documents'), 'NeoQueue Backups');
+};
+
+const getBackupDir = (): string => {
+  return getConfiguredBackupDir() ?? getDefaultBackupDir();
 };
 
 const serializeAppState = (data: AppState): string =>
@@ -551,7 +587,77 @@ const createWindow = (): void => {
  * Create system tray icon with context menu
  */
 const buildTrayMenu = (): Electron.Menu => {
+  const configuredBackupDir = getConfiguredBackupDir();
+  const defaultBackupDir = getDefaultBackupDir();
+
+  const backupStatusLabel = configuredBackupDir
+    ? `Secondary backup: ${configuredBackupDir}`
+    : `Secondary backup: (default) ${defaultBackupDir}`;
+
+  const openBackupDir = async (targetDir: string): Promise<void> => {
+    try {
+      // Open the directory in the OS file explorer.
+      await shell.openPath(targetDir);
+    } catch (error) {
+      console.warn('Failed to open backup directory:', error);
+    }
+  };
+
+  const chooseBackupDir = async (): Promise<void> => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: 'Choose secondary backup folder',
+        properties: ['openDirectory', 'createDirectory'],
+      });
+
+      if (result.canceled || !result.filePaths?.[0]) return;
+
+      setSecondaryBackupDirSetting(result.filePaths[0]);
+      tray?.setContextMenu(buildTrayMenu());
+
+      // Run a backup immediately so the user can validate the path works.
+      if (latestBackupPayload) scheduleSecondaryBackup(latestBackupPayload, 0);
+    } catch (error) {
+      console.warn('Failed to choose backup directory:', error);
+    }
+  };
+
+  const clearBackupDir = (): void => {
+    setSecondaryBackupDirSetting(undefined);
+    tray?.setContextMenu(buildTrayMenu());
+  };
+
+  const legacyMntE = '/mnt/e/6 - Text/a - Work/Code';
+  const hasLegacyMntE = fs.existsSync(legacyMntE);
+
   return Menu.buildFromTemplate([
+    { label: backupStatusLabel, enabled: false },
+    {
+      label: 'Open backup folder',
+      click: () => void openBackupDir(getBackupDir()),
+    },
+    {
+      label: 'Set backup folder…',
+      click: () => void chooseBackupDir(),
+    },
+    {
+      label: 'Use default backup folder',
+      enabled: Boolean(configuredBackupDir),
+      click: () => clearBackupDir(),
+    },
+    ...(hasLegacyMntE
+      ? [
+          {
+            label: 'Use legacy /mnt/e backup folder',
+            click: () => {
+              setSecondaryBackupDirSetting(legacyMntE);
+              tray?.setContextMenu(buildTrayMenu());
+              if (latestBackupPayload) scheduleSecondaryBackup(latestBackupPayload, 0);
+            },
+          } as Electron.MenuItemConstructorOptions,
+        ]
+      : []),
+    { type: 'separator' },
     {
       label: 'Show NeoQueue',
       click: () => {

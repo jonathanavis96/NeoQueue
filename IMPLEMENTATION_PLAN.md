@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 15:52:10
+Last updated: 2026-01-17 16:01:24
 
 ## Current State
 
@@ -63,7 +63,7 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
   - Keep current All/Active/Discussed export flows unchanged.
   - Include validation for invalid/empty ranges.
 
-- [ ] **Task 30:** Make secondary backup location configurable (opt-in)
+- [x] **Task 30:** Make secondary backup location configurable (opt-in)
   - Current: always writes to `Documents/NeoQueue Backups/backup-latest.json` (best-effort).
   - Target: allow an optional user-specified directory (and potentially support the legacy `/mnt/e/...` path when present).
   - Must remain non-blocking: backup failures never break saves.
@@ -92,6 +92,11 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
 - Added date-range export via Help panel (field: Created/Completed; From/To; JSON/Markdown).
 - Date parsing/validation: expects `YYYY-MM-DD`, inclusive end date, rejects invalid/empty range (from > to).
 - Existing scoped exports (All/Active/Discussed) remain unchanged.
+
+**2026-01-17 (Build): Task 30 complete**
+- Secondary backup location can now be customized via the tray menu (set folder / revert to default).
+- Detects and offers the legacy `/mnt/e/6 - Text/a - Work/Code` path when present.
+- Backup remains best-effort and non-blocking; failures log warnings but don't break saves.
 
 ---
 
