@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 14:06:29
+Last updated: 2026-01-17 14:17:45
 
 ## Current State
 
@@ -62,7 +62,7 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 
 ### Medium Priority
 
-- [ ] **Task 18:** “Right-click copy + follow-up” ergonomics (list-first compatible)
+- [x] **Task 18:** “Right-click copy + follow-up” ergonomics (list-first compatible)
   - Optional alternative to the canvas spec: add a context-menu/right-click action on an item to copy text and auto-open the follow-up input.
   - Keep existing one-click copy button.
 
@@ -117,6 +117,11 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 - Intercepts window close to hide to tray when enabled (and a tray exists).
 - Added tray context menu checkbox to toggle close-to-tray.
 - Ensures real quit still works by setting an `isQuitting` guard via `app.on('before-quit')`.
+
+**2026-01-17 (Build Iteration): Task 18 right-click copy + follow-up ergonomics**
+- Added `onContextMenu` handler on `QueueItemCard` to copy item text, expand follow-ups, and focus the follow-up input.
+- Does not hijack right-click on interactive child elements (buttons/inputs).
+- Updated Help panel copy hint accordingly.
 
 **2026-01-17 (Build Iteration): Task 17 window bounds persistence**
 - Persisted window bounds (`windowState.bounds`) + maximize state (`windowState.isMaximized`) to `electron-store`.

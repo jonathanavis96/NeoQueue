@@ -108,7 +108,7 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({
           <h3 className="help-panel-section-title">Core flow</h3>
           <ul className="help-panel-list">
             <li><strong>Add item:</strong> type and press <kbd>{keyLabel.enter}</kbd></li>
-            <li><strong>Copy:</strong> click the copy button on an item</li>
+            <li><strong>Copy:</strong> click the copy button on an item (or right-click the item to copy + start a follow-up)</li>
             <li><strong>Follow-ups:</strong> expand an item and add a follow-up</li>
             <li><strong>Discussed:</strong> mark an item complete to move it to “Discussed”</li>
           </ul>

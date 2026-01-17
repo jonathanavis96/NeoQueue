@@ -77,6 +77,26 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
     setIsExpanded((prev) => !prev);
   }, []);
 
+  const handleRightClick = useCallback(async (e: React.MouseEvent) => {
+    // "Right-click copy + follow-up" ergonomics:
+    // - Copy the item text
+    // - Expand follow-ups
+    // - Focus the follow-up input for immediate typing
+    // Avoid hijacking context menus on interactive elements (buttons/inputs).
+    const target = e.target as HTMLElement | null;
+    if (target && target.closest('button, input, textarea, a')) return;
+
+    e.preventDefault();
+
+    await handleCopy();
+    setIsExpanded(true);
+
+    // Wait a tick so the input exists in the DOM.
+    window.setTimeout(() => {
+      followUpInputRef.current?.focus();
+    }, 0);
+  }, [handleCopy]);
+
   const handleFollowUpSubmit = useCallback(async () => {
     const trimmedText = followUpText.trim();
     if (!trimmedText || isAddingFollowUp) return;
@@ -105,7 +125,13 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
   const hasFollowUps = item.followUps.length > 0;
 
   return (
-    <div className={`queue-item-card ${item.isCompleted ? 'completed' : ''} ${isExpanded ? 'expanded' : ''}`}>
+    <div
+      className={`queue-item-card ${item.isCompleted ? 'completed' : ''} ${isExpanded ? 'expanded' : ''}`}
+      onContextMenu={handleRightClick}
+      role="group"
+      aria-label="Queue item"
+      title="Right-click to copy and add a follow-up"
+    >
       <div className="queue-item-main">
         <button
           className={`queue-item-checkbox ${item.isCompleted ? 'checked' : ''}`}

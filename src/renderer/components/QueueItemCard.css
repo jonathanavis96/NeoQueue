@@ -11,6 +11,10 @@
   border-color: var(--matrix-green-dim);
 }
 
+.queue-item-card:focus-within {
+  border-color: var(--matrix-green);
+}
+
 .queue-item-card.completed {
   opacity: 0.6;
   border-color: var(--matrix-green-dark);
