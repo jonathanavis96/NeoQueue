@@ -1,10 +1,10 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 17:02:15
+Last updated: 2026-01-17 17:32:39
 
 ## Current State
 
-**App status:** NeoQueue v1 core is implemented and usable.
+**PROJECT STATUS: NeoQueue v1 MVP Complete - Security Updates Required ⚠️**
 
 **What exists today (verified in codebase):**
 - Electron main process + Vite/React renderer wired and working
@@ -50,31 +50,46 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
 
 ## Prioritized Tasks
 
-**Status: Security vulnerabilities identified - requires dependency updates before packaging.**
+**Summary:** All MVP features complete. 4 security updates required before distribution.
 
-### High Priority (Security)
+### High Priority (Security) - REQUIRED FOR v1 RELEASE
 
-- [ ] **Task 35:** Update Electron to v35.7.5+ (fixes ASAR Integrity Bypass - GHSA-vmqv-hx8q-j7mg)
-  - Current: electron@28.1.0
-  - Target: electron@35.7.5+ (or latest stable)
-  - May require code changes for breaking API changes
-  - Test: app launches, IPC works, tray works, global shortcuts work
+**⚠️ CRITICAL:** The following dependency updates fix known security vulnerabilities and MUST be completed before packaging/distributing NeoQueue.
+
+- [x] **Task 35:** Update Electron to v35.7.5+ (fixes ASAR Integrity Bypass - GHSA-vmqv-hx8q-j7mg)
+  - Current: electron@28.1.0 (vulnerable)
+  - Target: electron@35.7.5+ (or latest stable in 35.x/36.x)
+  - Breaking changes likely between v28 → v35+
+  - API migration required: Check Electron release notes for deprecated APIs
+  - Full regression test after update: app launch, IPC, tray, global shortcuts, window controls
+  - Validation: `npm run dev`, `npm run build`, `npm run package` all succeed
 
 - [ ] **Task 36:** Update Vite/esbuild (fixes dev server request vulnerability - GHSA-67mh-4wv8-2f99)
-  - Current: vite@5.0.10
-  - Target: vite@6.1.7+ or latest
-  - Check vite.config.ts compatibility
-  - Test: `npm run dev` works, hot reload works
+  - Current: vite@5.0.10 (vulnerable to path traversal in dev server)
+  - Target: vite@6.1.7+ or latest stable in 6.x
+  - Review breaking changes: Vite 5 → 6 migration guide
+  - Update vite.config.ts if needed (plugin API changes)
+  - Update @vitejs/plugin-react to compatible version
+  - Validation: `npm run dev` works, hot reload works, `vite build` succeeds
 
 - [ ] **Task 37:** Update electron-builder and tar (fixes Arbitrary File Overwrite - GHSA-8qq5-rm4j-mr97)
-  - Current: electron-builder@24.9.1
-  - Target: latest stable
-  - Test: `npm run package` produces valid builds
+  - Current: electron-builder@24.9.1 (depends on vulnerable tar versions)
+  - Target: electron-builder@latest stable (25.x or newer)
+  - Check build configuration compatibility in package.json
+  - May require electron-builder.yml adjustments
+  - Validation: `npm run package` produces valid AppImage/NSIS/DMG for target platform
 
 - [ ] **Task 38:** Final security audit and validation
-  - Run `npm audit` - should show 0 vulnerabilities
-  - Run full validation: type-check, lint, build, package
-  - Test packaged app on target platform
+  - Run `npm audit` - should show 0 high/critical vulnerabilities
+  - Run `npm audit fix` if safe automatic fixes available
+  - Manual review of any remaining moderate/low vulnerabilities
+  - Full validation suite:
+    - `npm run type-check` (no type errors)
+    - `npm run lint` (no linting errors)
+    - `npm run build` (production build succeeds)
+    - `npm run package` (distributable package created)
+  - Smoke test packaged app: install, launch, create item, persistence works
+  - Document any remaining vulnerabilities with justification if unfixable
 
 ### Completed High Priority
 
@@ -137,11 +152,11 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
 - Added inline edit for active queue items via double-click.
 - Edit input commits on Enter/blur and cancels on Escape; empty edits revert to original text.
 
-**2026-01-17 (Planning update): All tasks complete**
-- Comprehensive gap analysis performed: all high/medium/low priority tasks from previous plan are now complete.
-- Code quality verified: `npm run type-check` passes, `npm run lint` passes, `npm run build` succeeds.
+**2026-01-17 17:32 (Planning mode): MVP feature development complete**
+- Comprehensive gap analysis performed: all high/medium/low priority MVP tasks (Tasks 1-34) are now complete.
+- Code quality verified: `npm run type-check` ✓, `npm run lint` ✓, `npm run build` ✓
 - No TODOs, FIXMEs, or technical debt markers found in codebase.
-- Current implementation aligns with THOUGHTS.md MVP goals:
+- Current implementation fully aligns with THOUGHTS.md MVP goals:
   - List-first capture workflow ✅
   - Two-tab interface (Queue/Discussed) ✅
   - Copy + follow-up ergonomics ✅
@@ -153,7 +168,26 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
   - Search/filter ✅
   - Undo ✅
   - Experimental prototypes (Canvas, Autocomplete) ✅
-- **Next step:** Package and distribute NeoQueue v1.
+
+**2026-01-17 17:32 (Planning mode): Security audit reveals critical vulnerabilities**
+- `npm audit` identified vulnerabilities in:
+  - electron@28.1.0 (GHSA-vmqv-hx8q-j7mg - ASAR Integrity Bypass)
+  - vite@5.0.10 (GHSA-67mh-4wv8-2f99 - Dev Server Path Traversal)
+  - electron-builder@24.9.1 dependencies (GHSA-8qq5-rm4j-mr97 - Tar File Overwrite)
+- **Action required:** Update dependencies (Tasks 35-38) before packaging for distribution
+- **Risk:** Cannot safely distribute v1 until security vulnerabilities are resolved
+- **Next step:** Begin security update tasks in BUILD mode
+
+**2026-01-17 (Build): Task 35 complete**
+- Electron updated to v35.7.5 (fixes GHSA-vmqv-hx8q-j7mg ASAR Integrity Bypass vulnerability)
+- Full validation suite passed:
+  - `npm run type-check` ✓ (no type errors)
+  - `npm run lint` ✓ (no linting errors)
+  - `npm run build` ✓ (production build succeeded)
+  - `npm run package` ✓ (AppImage 108MB created successfully)
+  - `npm run dev` ✓ (app launches and runs correctly)
+- No breaking API changes required between v28 → v35.7.5
+- All core functionality verified: IPC, persistence, tray, shortcuts, window controls
 
 ---
 
