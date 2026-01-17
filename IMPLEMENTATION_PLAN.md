@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 16:22:46
+Last updated: 2026-01-17 16:38:08
 
 ## Current State
 
@@ -82,7 +82,7 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
   - Current: one global search query for the list view; does not clear on tab switch; searches item + follow-up text only.
   - Target: per-tab persisted search (clears when switching tabs) and optionally include timestamps in matches.
 
-- [ ] **Task 34:** Inline edit of item text (optional)
+- [x] **Task 34:** Inline edit of item text (optional)
   - Add a minimal, safe “double-click to edit” flow for Queue items.
   - Reuse existing `updateItem` plumbing; preserve keyboard-first ergonomics.
 
@@ -126,6 +126,10 @@ Ship a polished NeoQueue v1 that meets MVP goals (fast capture, follow-ups, comp
 **2026-01-17 (Build): Task 33 complete**
 - Search now clears when switching between Queue/Discussed tabs (including auto-switches).
 - Search matches now include item/follow-up timestamps (ISO strings) in addition to text.
+
+**2026-01-17 (Build): Task 34 complete**
+- Added inline edit for active queue items via double-click.
+- Edit input commits on Enter/blur and cancels on Escape; empty edits revert to original text.
 
 ---
 

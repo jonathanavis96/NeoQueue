@@ -22,6 +22,7 @@ interface QueueItemListProps {
   onToggleComplete: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onAddFollowUp: (itemId: string, text: string) => Promise<void>;
+  onUpdateItem: (id: string, updates: Partial<QueueItem>) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -34,6 +35,7 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
   onToggleComplete,
   onDelete,
   onAddFollowUp,
+  onUpdateItem,
   isLoading = false,
 }) => {
   const [selectedTab, setSelectedTab] = useState<QueueTab>(() => {
@@ -165,6 +167,7 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
                 onToggleComplete={onToggleComplete}
                 onDelete={onDelete}
                 onAddFollowUp={onAddFollowUp}
+                onUpdateItem={onUpdateItem}
               />
             ))}
           </div>

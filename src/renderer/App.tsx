@@ -19,6 +19,7 @@ const App: React.FC = () => {
     toggleComplete,
     deleteItem,
     addFollowUp,
+    updateItem,
     canvasPositions,
     setCanvasPosition,
     exportJson,
@@ -432,6 +433,7 @@ const App: React.FC = () => {
             onToggleComplete={toggleComplete}
             onDelete={deleteItem}
             onAddFollowUp={addFollowUp}
+            onUpdateItem={updateItem}
             isLoading={isLoading}
           />
         )}

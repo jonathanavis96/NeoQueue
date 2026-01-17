@@ -3,7 +3,7 @@
  * and expandable follow-up threading
  */
 
-import React, { useState, useCallback, useRef, useId } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useId } from 'react';
 import { QueueItem } from '../../shared/types';
 import { useAutocomplete, useUiEffects, useExperimentalFlags } from '../hooks';
 import { AutocompletePopover } from './AutocompletePopover';
@@ -16,6 +16,7 @@ interface QueueItemCardProps {
   onToggleComplete: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onAddFollowUp: (itemId: string, text: string) => Promise<void>;
+  onUpdateItem: (id: string, updates: Partial<QueueItem>) => Promise<void>;
 }
 
 // Format relative time (e.g., "2 hours ago")
@@ -41,16 +42,37 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
   onToggleComplete,
   onDelete,
   onAddFollowUp,
+  onUpdateItem,
 }) => {
   const { triggerPulse } = useUiEffects();
 
   const [isCopied, setIsCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftText, setDraftText] = useState(item.text);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const editInputRef = useRef<HTMLInputElement>(null);
+
   const [followUpText, setFollowUpText] = useState('');
   const [followUpCursor, setFollowUpCursor] = useState(0);
   const [isAddingFollowUp, setIsAddingFollowUp] = useState(false);
   const followUpInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing) return;
+    setDraftText(item.text);
+  }, [isEditing, item.text]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+
+    window.setTimeout(() => {
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+    }, 0);
+  }, [isEditing]);
 
   const followUpPopoverId = useId();
 
@@ -96,6 +118,56 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
   const handleToggleExpand = useCallback(() => {
     setIsExpanded((prev) => !prev);
   }, []);
+
+  const exitEditMode = useCallback(() => {
+    setIsEditing(false);
+    setDraftText(item.text);
+    setIsSavingEdit(false);
+  }, [item.text]);
+
+  const commitEdit = useCallback(async () => {
+    if (isSavingEdit) return;
+
+    const trimmed = draftText.trim();
+    // Safety: never allow empty item text.
+    if (!trimmed) {
+      exitEditMode();
+      return;
+    }
+
+    // No-op if unchanged.
+    if (trimmed === item.text) {
+      setIsEditing(false);
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      triggerPulse('other');
+      await onUpdateItem(item.id, { text: trimmed });
+      setIsEditing(false);
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }, [draftText, exitEditMode, isSavingEdit, item.id, item.text, onUpdateItem, triggerPulse]);
+
+  const handleStartEdit = useCallback(() => {
+    if (item.isCompleted) {
+      // Keep discussed items inert by default.
+      return;
+    }
+    setIsEditing(true);
+  }, [item.isCompleted]);
+
+  const handleEditKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      void commitEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      exitEditMode();
+    }
+  }, [commitEdit, exitEditMode]);
 
   const syncCursorFromDom = useCallback(() => {
     const el = followUpInputRef.current;
@@ -188,9 +260,33 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
         </button>
         
         <div className="queue-item-content">
-          <p className={`queue-item-text ${item.isCompleted ? 'completed' : ''}`}>
-            {item.text}
-          </p>
+          {isEditing ? (
+            <input
+              ref={editInputRef}
+              type="text"
+              className="queue-item-edit"
+              value={draftText}
+              onChange={(e) => setDraftText(e.target.value)}
+              onKeyDown={handleEditKeyDown}
+              onBlur={() => {
+                // Keep this minimal and predictable: blur commits if changed, otherwise cancels.
+                void commitEdit();
+              }}
+              disabled={isSavingEdit}
+              aria-label="Edit queue item"
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
+            />
+          ) : (
+            <p
+              className={`queue-item-text ${item.isCompleted ? 'completed' : ''}`}
+              onDoubleClick={handleStartEdit}
+              title={item.isCompleted ? undefined : 'Double-click to edit'}
+            >
+              {item.text}
+            </p>
+          )}
           <div className="queue-item-meta">
             <span className="queue-item-time">{formatRelativeTime(item.createdAt)}</span>
             {hasFollowUps && (
