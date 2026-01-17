@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 14:58:05
+Last updated: 2026-01-17 15:14:48
 
 ## Current State
 
@@ -85,30 +85,70 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
   - Ensure keyboard-only usage still works (Escape to cancel, Enter to save)
 
 - [ ] **Task 26:** Tab-autocomplete + learned dictionary (THOUGHTS.md)
-  - Notes from audit: no autocomplete implementation exists yet.
+  - Goal: speed up entry of recurring technical terms (projects, filenames, acronyms) without turning NeoQueue into an editor.
+  - Constraints:
+    - Must not break keyboard navigation (Tab should still move focus when no suggestion is active).
+    - Must not conflict with existing shortcuts (Ctrl/Cmd+N, Ctrl/Cmd+F, Ctrl/Cmd+Z, Esc).
+    - Should be opt-in until proven stable (behind an experimental flag or setting).
 
-- [ ] **Task 26.1:** Define autocomplete scope + UX rules
-  - Where it applies (new-item input? follow-up input? search?)
-  - How to cycle suggestions with Tab / Shift+Tab
-  - How to accept/cancel suggestions
+- [x] **Task 26.1:** Define autocomplete scope + UX rules (spec)
+  - **Where it applies (v1 of autocomplete):**
+    - QuickCapture (new item)
+    - Follow-up input (QueueItemCard)
+    - Canvas draft input (only when Canvas flag enabled)
+    - **Not** SearchBox (search should remain literal)
+  - **Tokenization:**
+    - Current token is the contiguous run of allowed characters immediately before the cursor.
+    - Split boundaries are any characters outside this set: `[A-Za-z0-9._\-/]`.
+    - Examples:
+      - `foo-bar` is one token.
+      - `src/main.ts` is one token.
+      - `hello,world` is two tokens (`hello` and `world`).
+  - **When suggestion appears:** only after user has typed **3+ characters** in the current token.
+  - **Suggestion source:** learned dictionary tokens (case-insensitive match), but suggestions should preserve original casing from the stored token.
+  - **Key behavior precedence (from highest to lowest):**
+    1. `Esc`: if suggestion UI is visible, dismiss it (do not clear the input); otherwise fall back to existing Esc behavior (e.g., clear in QuickCapture / cancel draft in Canvas).
+    2. `Tab`:
+       - If suggestion is active/visible: accept selected suggestion (keep focus; prevent default).
+       - Else: allow normal focus traversal (do not prevent default).
+    3. `Shift+Tab`: if suggestions visible, cycle backward; otherwise normal focus traversal.
+    4. `ArrowUp/ArrowDown`: if suggestions visible, cycle selection; otherwise do nothing special.
+    5. `Enter`: keep current behavior (submit/add). Suggestion acceptance is optional.
+  - **Suggestion ordering:**
+    - Prefix matches first.
+    - Stable ordering for predictability (alphabetical as tie-breaker).
+  - **Accessibility:** suggestion UI should be announced without stealing focus. Prefer `aria-controls` + `role="listbox"` and `aria-activedescendant`, or an `aria-live="polite"` summary if we keep UI minimal.
+  - **Non-goals:** fuzzy matching, spellcheck replacement, or suggestions inside SearchBox.
 
-- [ ] **Task 26.2:** Implement minimal learned dictionary
-  - Persist learned words (likely electron-store via IPC, or localStorage if renderer-only)
-  - Seed with a small dev-term list
+- [ ] **Task 26.2:** Implement minimal learned dictionary (persistence)
+  - Data: `string[]` unique (case-insensitive compare), size-limited (e.g., 500 entries).
+  - Seed with a small built-in dev list (e.g., Electron, React, TypeScript, CI, PR, Git).
+  - Learning rule: learn tokens from submitted item/follow-up text (ignore tokens < 3 chars; ignore pure numbers/punctuation).
+  - Storage approach:
+    - Prefer `electron-store` via IPC so it persists alongside other app state and benefits from backup/export/import.
+    - Fallback: localStorage (renderer-only) if IPC is deferred.
 
-- [ ] **Task 26.3:** Implement autocomplete UI behavior
-  - Inline ghost text or small popover under input
-  - Must not break existing shortcuts (Tab for focus traversal when not typing)
+- [ ] **Task 26.3:** Implement autocomplete engine + hook (renderer)
+  - Pure function: `getSuggestions(prefix, dictionary, limit)`.
+  - Hook: token detection + suggestion list + selected index + key handling (Tab/Shift+Tab/Esc).
+  - Keep implementation UI-agnostic so multiple inputs can reuse it.
+
+- [ ] **Task 26.4:** Integrate autocomplete UI into existing inputs
+  - Pick one UI: inline ghost text OR a small popover anchored under the input.
+  - Must degrade gracefully: if suggestion UI fails, typing/submitting still works.
+  - Ensure feature is gated (experimental flag or setting).
 
 - [ ] **Task 27:** Code-aware spellcheck/autocorrect tuning (THOUGHTS.md)
-  - Notes from audit: no spellcheck/autocorrect customization exists yet.
+  - Reality check: Electron/Chromium spellcheck customization is non-trivial; keep scope pragmatic.
 
-- [ ] **Task 27.1:** Decide target: spellcheck suppression vs “do nothing”
-  - Electron/Chromium spellcheck customization is non-trivial.
-  - A pragmatic option: disable spellcheck on inputs entirely, or add per-input toggles.
+- [ ] **Task 27.1:** Decide target behavior (spec)
+  - Option A (simplest): disable spellcheck on QuickCapture + follow-up inputs via `spellCheck={false}`.
+  - Option B: leave spellcheck as-is and rely on autocomplete/dictionary.
+  - Option C (hard): implement token-based suppression (likely requires a custom editor layer).
 
-- [ ] **Task 27.2:** If implementing suppression: disable spellcheck for code-ish tokens
-  - Likely requires a custom editor layer; validate feasibility before coding.
+- [ ] **Task 27.2:** If implementing spellcheck changes, do the minimal safe implementation
+  - If Option A: add `spellCheck={false}` to relevant inputs and document why.
+  - If Option C: first do a feasibility spike and document constraints before committing to implementation.
 
 ---
 
@@ -126,8 +166,9 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
 ## Discoveries & Notes
 
 **2026-01-17 (Planning update): Future-direction audit**
-- Confirmed: no existing canvas UI, feature-flag framework, tab-autocomplete, or spellcheck/autocorrect tuning code exists in `src/`.
-- Recommendation: for any future-direction features, introduce them behind a minimal feature flag first to avoid destabilizing the shipped list-first experience.
+- Confirmed: no existing tab-autocomplete or spellcheck/autocorrect tuning code exists in `src/`.
+- Autocomplete targets should be limited to QuickCapture + follow-up inputs (and optional Canvas draft input) to avoid surprising behavior in Search.
+- Recommendation: keep autocomplete opt-in behind an experimental flag or explicit setting until stable.
 
 **2026-01-17 (Build Iteration): Task 24 AppState migrations hardening**
 - Added shared `migrateAppState()` helper (`src/shared/migrations.ts`) to normalize legacy/partial state and coerce dates.
