@@ -60,8 +60,8 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
     - Guardrails: shows confirmation before overwriting current state.
 
 - [ ] **Task 17:** Window behavior polish
-  - [ ] Add a **close-to-tray** option (intercept window close event and hide instead)
-    - Persist setting (likely in `electron-store`)
+  - [x] Add a **close-to-tray** option (intercept window close event and hide instead)
+    - Persist setting (implemented via `electron-store`, toggled via tray menu)
   - [ ] Remember window size/position across restarts (`BrowserWindow.getBounds()` → persist → restore)
   - [ ] Ensure behavior is sane on multi-monitor changes (fallback to centered default)
 
@@ -119,6 +119,12 @@ Ship a polished NeoQueue v1 that meets the *practical* MVP goals (fast capture, 
 **2026-01-17 (Build Iteration): Task 16 debounced secondary backup**
 - Added best-effort, debounced writes of `AppState` to `Documents/NeoQueue Backups/backup-latest.json` on every successful save.
 - Uses Windows-safe path joining and never fails the primary save if backup fails.
+
+**2026-01-17 (Build Iteration): Task 17 close-to-tray option**
+- Added persisted `closeToTray` setting (electron-store).
+- Intercepts window close to hide to tray when enabled (and a tray exists).
+- Added tray context menu checkbox to toggle close-to-tray.
+- Ensures real quit still works by setting an `isQuitting` guard via `app.on('before-quit')`.
 
 **2026-01-17 (Build Iteration): Task 16 export Markdown**
 - Added Markdown export via Electron save dialog and IPC (`export-markdown`).

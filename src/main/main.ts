@@ -44,16 +44,46 @@ const getTrayIcon = (): Electron.NativeImage | null => {
   return safeNativeImageFromPath(getAssetPath('build', 'tray.png'));
 };
 
+type AppSettings = {
+  /**
+   * When true, clicking the window close button hides NeoQueue instead of quitting.
+   *
+   * Why: NeoQueue is tray-first and should keep running for quick capture.
+   */
+  closeToTray: boolean;
+};
+
+type StoreSchema = {
+  appState: AppState;
+  settings: AppSettings;
+};
+
 // Initialize electron-store for persistent data storage
-const store = new Store<{ appState: AppState }>({
+const store = new Store<StoreSchema>({
   name: 'neoqueue-data',
   defaults: {
     appState: {
       items: [],
       version: 1,
     },
+    settings: {
+      closeToTray: false,
+    },
   },
 });
+
+const getCloseToTraySetting = (): boolean => {
+  return Boolean(store.get('settings')?.closeToTray);
+};
+
+const setCloseToTraySetting = (enabled: boolean): void => {
+  store.set('settings', {
+    ...(store.get('settings') ?? { closeToTray: false }),
+    closeToTray: enabled,
+  });
+};
+
+let isQuitting = false;
 
 /**
  * Debounced backup to a secondary location.
@@ -391,6 +421,17 @@ const createWindow = (): void => {
     show: false, // Don't show until ready
   });
 
+  // Close-to-tray: intercept the close button and hide the window instead.
+  // Note: we only do this when a tray exists; otherwise the user could "lose" the app.
+  mainWindow.on('close', (e) => {
+    if (isQuitting) return;
+    if (!tray) return;
+    if (!getCloseToTraySetting()) return;
+
+    e.preventDefault();
+    mainWindow?.hide();
+  });
+
   // Load the app
   if (isDev) {
     // In development, load from Vite dev server
@@ -449,6 +490,15 @@ const createTray = (): void => {
         showAndFocusWindow();
         // Send shortcut event to renderer
         mainWindow?.webContents.send(IPC_CHANNELS.SHORTCUT_NEW_ITEM);
+      },
+    },
+    { type: 'separator' },
+    {
+      label: 'Close to tray',
+      type: 'checkbox',
+      checked: getCloseToTraySetting(),
+      click: (menuItem) => {
+        setCloseToTraySetting(menuItem.checked);
       },
     },
     { type: 'separator' },
@@ -527,6 +577,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Mark that we are intentionally quitting (not just hiding on close-to-tray).
+app.on('before-quit', () => {
+  isQuitting = true;
 });
 
 // Unregister shortcuts when app is about to quit
