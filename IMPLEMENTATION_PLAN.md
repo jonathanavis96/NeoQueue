@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 14:03:03
+Last updated: 2026-01-17 14:06:29
 
 ## Current State
 
@@ -44,8 +44,7 @@ Last updated: 2026-01-17 14:03:03
 - Current app is intentionally **list-first** (faster to ship, already meets practical MVP goals).
 
 **Remaining notable gaps (as of this plan update):**
-- Window bounds persistence (size/position) across restarts is not implemented.
-- No multi-monitor sanity checks/fallback yet (e.g., display change makes saved bounds off-screen).
+- (Window state persistence + multi-monitor fallback implemented as part of Task 17.)
 
 ## Goal
 
