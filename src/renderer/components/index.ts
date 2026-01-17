@@ -7,3 +7,4 @@ export { SearchBox } from './SearchBox';
 export { QueueItemCard } from './QueueItemCard';
 export { QueueItemList } from './QueueItemList';
 export { HelpPanel } from './HelpPanel';
+export { CanvasView } from './CanvasView';

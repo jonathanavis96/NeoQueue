@@ -82,6 +82,42 @@
   gap: var(--spacing-sm);
 }
 
+.app-view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--matrix-green-dark);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.app-view-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--matrix-green-dark);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.app-view-toggle-btn:hover {
+  color: var(--matrix-green);
+}
+
+.app-view-toggle-btn.active {
+  color: var(--matrix-green);
+  border-left: 1px solid var(--matrix-green-dark);
+  border-right: 1px solid var(--matrix-green-dark);
+  background-color: rgba(0, 255, 0, 0.06);
+}
+
+.app-view-toggle-btn:first-child.active {
+  border-left: none;
+}
+
+.app-view-toggle-btn:last-child.active {
+  border-right: none;
+}
+
 .app-help-button {
   font-family: var(--font-mono);
   background: transparent;

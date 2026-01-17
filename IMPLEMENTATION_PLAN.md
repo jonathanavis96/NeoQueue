@@ -65,7 +65,7 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
 
 ### Low Priority (future direction)
 
-- [ ] **Task 25:** Canvas prototype (click-to-create) behind a feature flag
+- [x] **Task 25:** Canvas prototype (click-to-create) behind a feature flag
   - Goal: explore the original canvas-first concept without destabilizing v1.
   - Notes from audit: there is currently **no feature-flag framework** in the codebase.
 
@@ -75,12 +75,12 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
     - Persisted user toggle (Help panel) backed by `electron-store` / localStorage
   - Deliverable: a single boolean flag like `experimental.canvas` that can gate UI.
 
-- [ ] **Task 25.2:** Implement a basic Canvas view (renderer-only)
+- [x] **Task 25.2:** Implement a basic Canvas view (renderer-only)
   - Click blank area to open an input at cursor position
   - Save creates a normal QueueItem (same underlying data model)
   - No dragging / layout persistence in v1 of the prototype
 
-- [ ] **Task 25.3:** Provide navigation for Canvas (while flagged)
+- [x] **Task 25.3:** Provide navigation for Canvas (while flagged)
   - Simple toggle/button to switch “List” vs “Canvas” when enabled
   - Ensure keyboard-only usage still works (Escape to cancel, Enter to save)
 
@@ -152,6 +152,12 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
 **2026-01-17 (Build Iteration): Task 25.1 experimental flags (minimal)**
 - Added `experimentalFlags` helper in renderer, backed by Vite env: `VITE_EXPERIMENTAL_CANVAS`.
 - Added `vite-env.d.ts` type declarations for `import.meta.env`.
+
+**2026-01-17 (Build Iteration): Task 25/25.2/25.3 Canvas prototype (flagged)**
+- Added `CanvasView` renderer prototype: click-to-create input at cursor, Enter to save (creates a normal QueueItem), Escape to cancel.
+- Added deterministic "scatter" rendering for existing items (no drag/layout persistence in this prototype).
+- Added List/Canvas toggle UI in header when `VITE_EXPERIMENTAL_CANVAS` is enabled.
+- Updated Ctrl/Cmd+N shortcut handling: in Canvas mode it opens a centered draft input instead of focusing QuickCapture.
 
 ---
 

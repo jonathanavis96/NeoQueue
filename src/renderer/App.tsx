@@ -1,9 +1,11 @@
 import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import './styles/App.css';
 import { useQueueData, useKeyboardShortcuts, useUiEffects } from './hooks';
-import { QuickCapture, SearchBox, QueueItemList, HelpPanel } from './components';
+import { QuickCapture, SearchBox, QueueItemList, HelpPanel, CanvasView } from './components';
 import type { QuickCaptureRef } from './components/QuickCapture';
 import type { SearchBoxRef } from './components/SearchBox';
+import type { CanvasViewRef } from './components/CanvasView';
+import { experimentalFlags } from './experimentalFlags';
 
 const HELP_DISMISSED_KEY = 'neoqueue.help.dismissed';
 
@@ -30,11 +32,14 @@ const App: React.FC = () => {
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [activeView, setActiveView] = useState<'list' | 'canvas'>(() => (experimentalFlags.canvas ? 'canvas' : 'list'));
+
   const [isStartupBannerVisible, setIsStartupBannerVisible] = useState(false);
   const [startupBannerText, setStartupBannerText] = useState('');
 
   // Refs for programmatic focus
   const quickCaptureRef = useRef<QuickCaptureRef>(null);
+  const canvasRef = useRef<CanvasViewRef>(null);
   const searchRef = useRef<SearchBoxRef>(null);
   const hasShownStartupBannerRef = useRef(false);
 
@@ -102,12 +107,18 @@ const App: React.FC = () => {
 
   // Handler for new item shortcut - focus the input
   const handleNewItemShortcut = useCallback(() => {
+    if (activeView === 'canvas') {
+      canvasRef.current?.openNewItemAtCenter();
+      return;
+    }
     quickCaptureRef.current?.focus();
-  }, []);
+  }, [activeView]);
 
   const handleFindShortcut = useCallback(() => {
+    // Search only applies to list mode.
+    if (activeView === 'canvas') return;
     searchRef.current?.focus();
-  }, []);
+  }, [activeView]);
 
   const handleUndo = useCallback(async () => {
     if (!canUndo) return;
@@ -116,12 +127,15 @@ const App: React.FC = () => {
   }, [canUndo, triggerPulse, undo]);
 
   const handleEscape = useCallback(() => {
+    // Search only exists in list mode.
+    if (activeView === 'canvas') return;
+
     // Prefer clearing search first (if active), otherwise no-op.
     if (searchQuery.trim().length > 0) {
       setSearchQuery('');
       searchRef.current?.focus();
     }
-  }, [searchQuery]);
+  }, [activeView, searchQuery]);
 
   // Handle keyboard shortcuts (global from main process + local)
   useKeyboardShortcuts({
@@ -169,13 +183,35 @@ const App: React.FC = () => {
             <p className="app-subtitle">tracking discussion points</p>
           </div>
           <div className="app-header-actions">
-            <SearchBox
-              ref={searchRef}
-              value={searchQuery}
-              onChange={setSearchQuery}
-              onClear={() => setSearchQuery('')}
-              disabled={isLoading}
-            />
+            {experimentalFlags.canvas && (
+              <div className="app-view-toggle" role="group" aria-label="View">
+                <button
+                  type="button"
+                  className={`app-view-toggle-btn ${activeView === 'list' ? 'active' : ''}`}
+                  onClick={() => setActiveView('list')}
+                  aria-pressed={activeView === 'list'}
+                >
+                  List
+                </button>
+                <button
+                  type="button"
+                  className={`app-view-toggle-btn ${activeView === 'canvas' ? 'active' : ''}`}
+                  onClick={() => setActiveView('canvas')}
+                  aria-pressed={activeView === 'canvas'}
+                >
+                  Canvas
+                </button>
+              </div>
+            )}
+            {activeView === 'list' && (
+              <SearchBox
+                ref={searchRef}
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onClear={() => setSearchQuery('')}
+                disabled={isLoading}
+              />
+            )}
             <button
               type="button"
               className={`app-help-button app-pin-button ${isAlwaysOnTop ? 'is-pinned' : ''}`}
@@ -295,7 +331,11 @@ const App: React.FC = () => {
       />
 
       <main className="app-main" role="main">
-        <QuickCapture ref={quickCaptureRef} onAdd={addItemWithFx} disabled={isLoading} />
+        {activeView === 'list' ? (
+          <QuickCapture ref={quickCaptureRef} onAdd={addItemWithFx} disabled={isLoading} />
+        ) : (
+          <CanvasView ref={canvasRef} items={items} onAddItem={addItemWithFx} isLoading={isLoading} />
+        )}
 
         {isStartupBannerVisible && (
           <div className="startup-banner" role="status" aria-live="polite">
@@ -318,22 +358,28 @@ const App: React.FC = () => {
           </div>
         )}
         
-        <QueueItemList
-          items={filteredItems}
-          hasUnfilteredItems={items.length > 0}
-          hasActiveSearch={hasActiveSearch}
-          onToggleComplete={toggleComplete}
-          onDelete={deleteItem}
-          onAddFollowUp={addFollowUp}
-          isLoading={isLoading}
-        />
+        {activeView === 'list' && (
+          <QueueItemList
+            items={filteredItems}
+            hasUnfilteredItems={items.length > 0}
+            hasActiveSearch={hasActiveSearch}
+            onToggleComplete={toggleComplete}
+            onDelete={deleteItem}
+            onAddFollowUp={addFollowUp}
+            isLoading={isLoading}
+          />
+        )}
       </main>
       
       {/* Keyboard shortcuts hint */}
       <div className="app-shortcuts-hint" aria-hidden="true">
         <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>Z</kbd> Undo &nbsp;|&nbsp;
         <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>N</kbd> New item &nbsp;|&nbsp;
-        <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>F</kbd> Search &nbsp;|&nbsp;
+        {activeView === 'list' && (
+          <>
+            <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>F</kbd> Search &nbsp;|&nbsp;
+          </>
+        )}
         <kbd>{window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl'}</kbd>+<kbd>Shift</kbd>+<kbd>Q</kbd> Toggle window
       </div>
     </div>
