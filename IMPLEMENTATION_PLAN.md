@@ -1,6 +1,6 @@
 # Implementation Plan - NeoQueue
 
-Last updated: 2026-01-17 15:38:23
+Last updated: 2026-01-17 15:45:26
 
 ## Current State
 
@@ -154,17 +154,35 @@ Ship a polished NeoQueue v1 that meets the practical MVP goals (fast capture, fo
   - Verify Tab behavior: accepts suggestion only when open; otherwise focus traversal.
   - Verify `aria-controls` + `aria-activedescendant` wiring is correct.
 
-- [ ] **Task 27:** Code-aware spellcheck/autocorrect tuning (THOUGHTS.md)
+- **Task 27:** Spellcheck/autocorrect tuning for technical text inputs (THOUGHTS.md)
   - Reality check: Electron/Chromium spellcheck customization is non-trivial; keep scope pragmatic.
+  - Current state (2026-01-17): we do **not** explicitly control spellcheck/autocorrect in any input; Chromium defaults apply.
 
-- [ ] **Task 27.1:** Decide target behavior (spec)
-  - Option A (simplest): disable spellcheck on QuickCapture + follow-up inputs via `spellCheck={false}`.
-  - Option B: leave spellcheck as-is and rely on autocomplete/dictionary.
-  - Option C (hard): implement token-based suppression (likely requires a custom editor layer).
+- [x] **Task 27.1:** Decide target behavior (spec)
+  - **Decision for v1:** take **Option A** below (disable spellcheck + autocorrect-ish behaviors in authoring inputs).
+  - **Option A (recommended / simplest):** Disable spellcheck + autocorrect-ish behaviors for *authoring* inputs where users type filenames, symbols, and technical tokens.
+    - Add to inputs:
+      - `spellCheck={false}`
+      - `autoCorrect="off"` (harmless in Chromium, useful for completeness)
+      - `autoCapitalize="off"`
+    - Applies to:
+      - QuickCapture input
+      - Follow-up input
+      - Canvas draft input (when enabled)
+    - Does **not** apply to SearchBox (search should remain literal; spellcheck suggestions are not harmful but are optional).
+  - **Option B:** Leave spellcheck as-is and rely on learned dictionary/autocomplete to reduce friction.
+  - **Option C (hard / likely out-of-scope):** Token-based suppression ("code-aware" spellcheck). Likely requires a custom editor layer or OS-level integration; treat as a research spike before committing.
 
-- [ ] **Task 27.2:** If implementing spellcheck changes, do the minimal safe implementation
-  - If Option A: add `spellCheck={false}` to relevant inputs and document why.
-  - If Option C: first do a feasibility spike and document constraints before committing to implementation.
+- [x] **Task 27.2:** Implement the minimal safe changes (if Option A is chosen)
+  - Added `spellCheck={false}` + `autoCorrect="off"` + `autoCapitalize="off"` to the relevant authoring inputs (QuickCapture, follow-up, Canvas draft).
+  - Ensure this does not break:
+    - Enter-to-submit
+    - Escape-to-clear/cancel
+    - Tab/Shift+Tab focus traversal when autocomplete suggestions are not open
+
+- [ ] **Task 27.3:** QA pass: spellcheck + keyboard behavior
+  - Verify red-underlines are gone in authoring inputs for technical tokens (e.g., `src/main.ts`, `AGENTS.md`, `userId`).
+  - Verify SearchBox behavior unchanged.
 
 ---
 

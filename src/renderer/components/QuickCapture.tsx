@@ -130,6 +130,9 @@ export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ on
           onKeyUp={syncCursorFromDom}
           placeholder="Type a discussion point and press Enter..."
           disabled={isSubmitting || disabled}
+          spellCheck={false}
+          autoCorrect="off"
+          autoCapitalize="off"
           autoFocus
           aria-label="New discussion item"
           aria-describedby="quick-capture-hint"
