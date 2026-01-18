@@ -9,7 +9,8 @@ PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || \
   PROJECT_ROOT="$(pwd)"
 
 # Find brain directory (configurable via env var, defaults to sibling directory)
-BRAIN_ROOT="${BRAIN_ROOT:-$PROJECT_ROOT/../brain}"
+# Canonicalize path for cleaner diagnostics
+BRAIN_ROOT="${BRAIN_ROOT:-$(cd "$PROJECT_ROOT/.." 2>/dev/null && pwd)/brain}"
 
 # Verify brain directory exists
 if [[ ! -d "$BRAIN_ROOT/ralph" ]]; then

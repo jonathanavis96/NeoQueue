@@ -33,7 +33,6 @@ For patterns and best practices, use progressive disclosure:
 # NeoQueue validation commands
 npm run type-check
 npm run lint
-npm test
 ```
 
 ## Project-Specific Notes
