@@ -1,289 +1,42 @@
 #!/usr/bin/env bash
+# Thin wrapper - delegates to brain's loop.sh
+# This keeps the single source of truth in brain/ralph/loop.sh
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-RALPH="$ROOT/ralph"
-LOGDIR="$RALPH/logs"
-mkdir -p "$LOGDIR"
+# Find project root: try git first, fall back to script directory
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || \
+  PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || \
+  PROJECT_ROOT="$(pwd)"
 
-# Interrupt handling: First Ctrl+C = graceful exit, Second Ctrl+C = immediate exit
-INTERRUPT_COUNT=0
-INTERRUPT_RECEIVED=false
+# Find brain directory (configurable via env var, defaults to sibling directory)
+# Canonicalize path for cleaner diagnostics
+BRAIN_ROOT="${BRAIN_ROOT:-$(cd "$PROJECT_ROOT/.." 2>/dev/null && pwd)/brain}"
 
-# Cleanup function for temp files
-cleanup() {
-  if [[ -n "${TEMP_CONFIG:-}" && -f "${TEMP_CONFIG:-}" ]]; then
-    rm -f "$TEMP_CONFIG"
-  fi
-}
-
-handle_interrupt() {
-  INTERRUPT_COUNT=$((INTERRUPT_COUNT + 1))
-  
-  if [[ $INTERRUPT_COUNT -eq 1 ]]; then
-    echo ""
-    echo "========================================"
-    echo "⚠️  Interrupt received!"
-    echo "Will exit after current iteration completes."
-    echo "Press Ctrl+C again to force immediate exit."
-    echo "========================================"
-    INTERRUPT_RECEIVED=true
-  else
-    echo ""
-    echo "========================================"
-    echo "🛑 Force exit!"
-    echo "========================================"
-    cleanup
-    kill 0
-    exit 130
-  fi
-}
-
-trap 'handle_interrupt' INT TERM
-trap 'cleanup' EXIT
-
-usage() {
-  cat <<'EOF'
-Usage:
-  loop.sh [--prompt <path>] [--iterations N] [--plan-every N] [--yolo|--no-yolo]
-          [--model <model>]
-
-Defaults:
-  --iterations 1
-  --plan-every 3
-  --model       Uses default from ~/.rovodev/config.yml
-  If --prompt is NOT provided, loop alternates:
-    - PLAN on iteration 1 and every N iterations
-    - BUILD otherwise
-  If --prompt IS provided, that prompt is used for all iterations.
-
-Model Selection:
-  --model <model>  Specify the model to use. Shortcuts available:
-                   opus    -> anthropic.claude-opus-4-5-20251101-v1:0
-                   sonnet  -> anthropic.claude-sonnet-4-20250514-v1:0
-                   Or provide a full model ID directly.
-
-Examples:
-  # Run BUILD once (from anywhere)
-  bash ralph/loop.sh --prompt ralph/PROMPT_build.md --iterations 1 --plan-every 999
-
-  # From inside ralph/
-  bash ./loop.sh --prompt ./PROMPT_build.md --iterations 1 --plan-every 999
-
-  # Alternate plan/build for 10 iters, plan every 3
-  bash ralph/loop.sh --iterations 10 --plan-every 3
-  
-  # Use Sonnet model for faster iterations
-  bash ralph/loop.sh --model sonnet --iterations 20 --plan-every 5
-  
-  # Use Opus for careful planning
-  bash ralph/loop.sh --model opus --iterations 1
-EOF
-}
-
-# Defaults
-ITERATIONS=1
-PLAN_EVERY=3
-YOLO_FLAG="--yolo"
-PROMPT_ARG=""
-MODEL_ARG=""
-
-# Parse args
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --prompt)
-      PROMPT_ARG="${2:-}"; shift 2 ;;
-    --iterations)
-      ITERATIONS="${2:-}"; shift 2 ;;
-    --plan-every)
-      PLAN_EVERY="${2:-}"; shift 2 ;;
-    --yolo)
-      YOLO_FLAG="--yolo"; shift ;;
-    --no-yolo)
-      YOLO_FLAG=""; shift ;;
-    --model)
-      MODEL_ARG="${2:-}"; shift 2 ;;
-    -h|--help)
-      usage; exit 0 ;;
-    *)
-      echo "Unknown arg: $1" >&2
-      usage; exit 2 ;;
-  esac
-done
-
-# Resolve model shortcut to full model ID
-# Model version configuration - SINGLE SOURCE OF TRUTH
-# Update these when new model versions are released
-# Last updated: 2026-01-17 (Sonnet 4.5 September 2025 release)
-MODEL_SONNET_45="anthropic.claude-sonnet-4-5-20250929-v1:0"
-MODEL_OPUS_45="anthropic.claude-opus-4-5-20251101-v1:0"
-MODEL_SONNET_4="anthropic.claude-sonnet-4-20250514-v1:0"
-
-# Default to Sonnet 4.5 for Ralph loops (Opus is global default for interactive)
-DEFAULT_MODEL="$MODEL_SONNET_45"
-
-resolve_model() {
-  local model="$1"
-  case "$model" in
-    opus|opus4.5|opus45)
-      echo "$MODEL_OPUS_45" ;;
-    sonnet|sonnet4.5|sonnet45)
-      echo "$MODEL_SONNET_45" ;;
-    sonnet4)
-      echo "$MODEL_SONNET_4" ;;
-    latest|auto)
-      # Use system default - don't override config
-      echo "" ;;
-    *)
-      echo "$model" ;;
-  esac
-}
-
-# Setup model config - default to Sonnet 4.5 for Ralph loops
-CONFIG_FLAG=""
-TEMP_CONFIG=""
-
-# Use provided model or default to Sonnet 4.5
-if [[ -z "$MODEL_ARG" ]]; then
-  MODEL_ARG="sonnet"  # Default for Ralph loops
+# Verify brain directory exists
+if [[ ! -d "$BRAIN_ROOT/ralph" ]]; then
+  echo "ERROR: Brain repository not found at: $BRAIN_ROOT"
+  echo ""
+  echo "Options:"
+  echo "  1. Clone brain repo as sibling: git clone <brain-repo> ../brain"
+  echo "  2. Set BRAIN_ROOT env var: BRAIN_ROOT=/path/to/brain ./loop.sh"
+  exit 1
 fi
 
-RESOLVED_MODEL="$(resolve_model "$MODEL_ARG")"
-
-# Only create temp config if we have a model to set
-if [[ -n "$RESOLVED_MODEL" ]]; then
-  TEMP_CONFIG="/tmp/rovodev_config_$$_$(date +%s).yml"
-  
-  # Copy base config and override modelId
-  if [[ -f "$HOME/.rovodev/config.yml" ]]; then
-    sed "s|^  modelId:.*|  modelId: $RESOLVED_MODEL|" "$HOME/.rovodev/config.yml" > "$TEMP_CONFIG"
-  else
-    cat > "$TEMP_CONFIG" <<EOFCONFIG
-version: 1
-agent:
-  modelId: $RESOLVED_MODEL
-EOFCONFIG
-  fi
-  CONFIG_FLAG="--config-file $TEMP_CONFIG"
-  echo "Using model: $RESOLVED_MODEL"
+# Verify brain entrypoint is present and executable
+BRAIN_LOOP="$BRAIN_ROOT/ralph/loop.sh"
+if [[ ! -x "$BRAIN_LOOP" ]]; then
+  echo "ERROR: Brain loop script missing or not executable: $BRAIN_LOOP"
+  echo ""
+  echo "Fix with:"
+  echo "  chmod +x $BRAIN_LOOP"
+  echo "Or set BRAIN_ROOT to correct location:"
+  echo "  BRAIN_ROOT=/path/to/brain ./loop.sh"
+  exit 1
 fi
-# Resolve a prompt path robustly (works from repo root or ralph/)
-resolve_prompt() {
-  local p="$1"
-  if [[ -z "$p" ]]; then return 1; fi
 
-  # 1) As provided (relative to current working directory)
-  if [[ -f "$p" ]]; then
-    realpath "$p"
-    return 0
-  fi
+# Export brain repo for commit trailers (can be overridden)
+export BRAIN_REPO="${BRAIN_REPO:-jonathanavis96/brain}"
 
-  # 2) Relative to repo root
-  if [[ -f "$ROOT/$p" ]]; then
-    realpath "$ROOT/$p"
-    return 0
-  fi
-
-  echo "Prompt not found: $p (checked: '$p' and '$ROOT/$p')" >&2
-  return 1
-}
-
-# Ralph determines mode from iteration number (PROMPT.md has conditional logic)
-PLAN_PROMPT="$RALPH/PROMPT.md"
-BUILD_PROMPT="$RALPH/PROMPT.md"
-
-run_once() {
-  local prompt_file="$1"
-  local phase="$2"
-  local iter="$3"
-
-  local ts
-  ts="$(date +%F_%H%M%S)"
-  local log="$LOGDIR/${ts}_iter${iter}_${phase}.log"
-
-  echo
-  echo "========================================"
-  echo "Ralph Loop"
-  echo "Root: $ROOT"
-  echo "Iteration: $iter / $ITERATIONS"
-  echo "Phase: $phase"
-  echo "Prompt: $prompt_file"
-  echo "Log: $log"
-  echo "========================================"
-  echo
-
-  # Create temporary prompt with mode prepended
-  local prompt_with_mode="/tmp/rovodev_prompt_with_mode_$$_${iter}.md"
-  {
-    echo "# MODE: ${phase^^}"
-    echo ""
-    cat "$prompt_file"
-  } > "$prompt_with_mode"
-
-  # Feed prompt into RovoDev (run from project root, not ralph/)
-  cd "$ROOT"
-  script -q -c "cat \"$prompt_with_mode\" | acli rovodev run ${CONFIG_FLAG} ${YOLO_FLAG}" "$log"
-
-  # Clean up temporary prompt
-  rm -f "$prompt_with_mode"
-
-  echo
-  echo "Run complete."
-  echo "Transcript: $log"
-  
-  # Check for completion sentinel (strip ANSI codes, require standalone line)
-  # Only matches when sentinel appears alone on a line (not in validation/discussion)
-  if sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -qE '^\s*:::COMPLETE:::\s*$'; then
-    echo ""
-    echo "========================================"
-    echo "🎉 Ralph signaled completion!"
-    echo "All tasks in IMPLEMENTATION_PLAN.md done."
-    echo "========================================"
-    return 42  # Special return code for completion
-  fi
-  
-  return 0
-}
-
-# Determine prompt strategy
-if [[ -n "$PROMPT_ARG" ]]; then
-  PROMPT_FILE="$(resolve_prompt "$PROMPT_ARG")"
-  for ((i=1; i<=ITERATIONS; i++)); do
-    # Check for interrupt before starting iteration
-    if [[ "$INTERRUPT_RECEIVED" == "true" ]]; then
-      echo ""
-      echo "Exiting gracefully after iteration $((i-1))."
-      exit 130
-    fi
-    
-    run_once "$PROMPT_FILE" "custom" "$i"
-    # Check if Ralph signaled completion
-    if [[ $? -eq 42 ]]; then
-      echo ""
-      echo "Loop terminated early due to completion."
-      break
-    fi
-  done
-else
-  # Alternating plan/build
-  for ((i=1; i<=ITERATIONS; i++)); do
-    # Check for interrupt before starting iteration
-    if [[ "$INTERRUPT_RECEIVED" == "true" ]]; then
-      echo ""
-      echo "Exiting gracefully after iteration $((i-1))."
-      exit 130
-    fi
-    
-    if [[ "$i" -eq 1 ]] || (( PLAN_EVERY > 0 && ( (i-1) % PLAN_EVERY == 0 ) )); then
-      run_once "$PLAN_PROMPT" "plan" "$i"
-    else
-      run_once "$BUILD_PROMPT" "build" "$i"
-    fi
-    # Check if Ralph signaled completion
-    if [[ $? -eq 42 ]]; then
-      echo ""
-      echo "Loop terminated early due to completion."
-      break
-    fi
-  done
-fi
+# Delegate to brain's loop.sh with project context
+export RALPH_PROJECT_ROOT="$PROJECT_ROOT"
+exec "$BRAIN_LOOP" "$@"
