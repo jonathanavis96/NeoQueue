@@ -180,6 +180,8 @@ interface QueueItemListProps {
   dictionary: readonly string[];
   hasUnfilteredItems?: boolean;
   hasActiveSearch?: boolean;
+  /** Current active project ID - used to reset tab on project switch */
+  activeProjectId?: string;
   /** Notifies the parent when the selected tab changes (including auto-switches). */
   onTabChange?: (tab: QueueTab) => void;
   onToggleComplete: (id: string) => Promise<void>;
@@ -188,6 +190,8 @@ interface QueueItemListProps {
   onUpdateItem: (id: string, updates: Partial<QueueItem>) => Promise<void>;
   /** Reorder items via drag-and-drop (receives the full reordered items array). */
   onReorderItems?: (items: QueueItem[]) => Promise<void>;
+  /** Move an item to a different project (for cross-component drag) */
+  onMoveItemToProject?: (itemId: string, targetProjectId: string) => void;
   isLoading?: boolean;
 }
 
@@ -196,12 +200,14 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
   dictionary,
   hasUnfilteredItems = false,
   hasActiveSearch = false,
+  activeProjectId,
   onTabChange,
   onToggleComplete,
   onDelete,
   onAddFollowUp,
   onUpdateItem,
   onReorderItems,
+  onMoveItemToProject,
   isLoading = false,
 }) => {
   const [selectedTab, setSelectedTab] = useState<QueueTab>(() => {
@@ -212,6 +218,20 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
       return 'queue';
     }
   });
+
+  // Track previous project to detect switches
+  const prevProjectIdRef = useRef(activeProjectId);
+  
+  // When project changes, switch to Queue tab if there are active items
+  useEffect(() => {
+    if (activeProjectId && activeProjectId !== prevProjectIdRef.current) {
+      const hasQueueItems = items.some(item => !item.isCompleted);
+      if (hasQueueItems) {
+        setSelectedTab('queue');
+      }
+      prevProjectIdRef.current = activeProjectId;
+    }
+  }, [activeProjectId, items]);
 
   useEffect(() => {
     try {
@@ -227,6 +247,7 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const [tabDropHover, setTabDropHover] = useState<QueueTab | null>(null);
+  const [projectTabHover, setProjectTabHover] = useState<string | null>(null); // Project ID being hovered
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -299,7 +320,23 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
     const handleMouseMove = (e: MouseEvent) => {
       setDragState((prev) => prev ? { ...prev, currentX: e.clientX, currentY: e.clientY } : null);
       
-      // Check if hovering over tabs
+      // Check if hovering over project tabs (for cross-project drag)
+      const projectTabs = document.querySelectorAll('[data-project-id]');
+      for (const tab of projectTabs) {
+        const rect = tab.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          const projectId = tab.getAttribute('data-project-id');
+          if (projectId) {
+            setProjectTabHover(projectId);
+            setTabDropHover(null);
+            setDropTarget(null);
+            return;
+          }
+        }
+      }
+      setProjectTabHover(null);
+      
+      // Check if hovering over Queue/Discussed tabs
       const queueTab = document.getElementById('queue-tab');
       const discussedTab = document.getElementById('discussed-tab');
       
@@ -327,8 +364,12 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
     const handleMouseUp = () => {
       if (!dragState) return;
 
-      // Handle tab drop
-      if (tabDropHover) {
+      // Handle project tab drop (cross-project move)
+      if (projectTabHover && onMoveItemToProject) {
+        onMoveItemToProject(dragState.id, projectTabHover);
+      }
+      // Handle Queue/Discussed tab drop
+      else if (tabDropHover) {
         const draggedItem = items.find((item) => item.id === dragState.id);
         if (draggedItem) {
           const isCurrentlyCompleted = draggedItem.isCompleted;
@@ -373,6 +414,7 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
       setDragState(null);
       setDropTarget(null);
       setTabDropHover(null);
+      setProjectTabHover(null);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -382,7 +424,7 @@ export const QueueItemList: React.FC<QueueItemListProps> = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [activeItems, calculateDropTarget, completedItems, dragState, dropTarget, items, onReorderItems, onToggleComplete, selectedTab, tabDropHover]);
+  }, [activeItems, calculateDropTarget, completedItems, dragState, dropTarget, items, onMoveItemToProject, onReorderItems, onToggleComplete, projectTabHover, selectedTab, tabDropHover]);
 
   // If the user is on a tab with 0 items and the other tab has some, auto-switch.
   // This mostly matters when filtering/searching.

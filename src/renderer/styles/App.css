@@ -75,7 +75,7 @@
   padding: var(--spacing-lg);
   border-bottom: 1px solid var(--matrix-green-dark);
   position: relative;
-  z-index: 10; /* Above matrix rain background */
+  z-index: 100; /* Above matrix rain background and main content */
   background-color: transparent; /* Let rain show through gaps */
 }
 
@@ -231,7 +231,7 @@
   padding: var(--spacing-lg);
   overflow-y: auto;
   position: relative;
-  z-index: 10; /* Above matrix rain background */
+  z-index: 1; /* Above matrix rain background but below header */
   background-color: transparent; /* Let rain show through gaps between UI elements */
 }
 
@@ -338,4 +338,100 @@
   border: 1px solid var(--matrix-green-dark);
   border-radius: 3px;
   margin: 0 2px;
+}
+
+/* Completed Projects View */
+.completed-projects-view {
+  padding: var(--spacing-lg);
+}
+
+.completed-projects-title {
+  font-size: 18px;
+  color: var(--matrix-green);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: var(--spacing-lg);
+  text-shadow: 0 0 8px var(--matrix-green-glow);
+}
+
+.completed-projects-empty {
+  color: var(--matrix-green-dim);
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.completed-projects-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.completed-project-item {
+  /* No additional styling needed */
+}
+
+.completed-project-button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--matrix-dark);
+  border: 1px solid var(--matrix-green-dark);
+  border-radius: var(--radius-md);
+  color: var(--matrix-green);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.completed-project-button:hover {
+  border-color: var(--matrix-green);
+  background: rgba(0, 255, 0, 0.05);
+}
+
+.completed-project-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.completed-project-date {
+  font-size: 11px;
+  color: var(--matrix-green-dim);
+  opacity: 0.7;
+}
+
+/* Mark Project Complete Banner */
+.mark-complete-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  background: rgba(0, 40, 0, 0.5);
+  border: 1px solid var(--matrix-green);
+  border-radius: var(--radius-md);
+  color: var(--matrix-green);
+  font-size: 13px;
+}
+
+.mark-complete-button {
+  background: var(--matrix-green);
+  color: var(--matrix-black);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mark-complete-button:hover {
+  background: #00ff00;
+  box-shadow: 0 0 12px var(--matrix-green-glow);
 }

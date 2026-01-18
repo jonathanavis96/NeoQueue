@@ -73,8 +73,13 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
     if (!isEditing) return;
 
     window.setTimeout(() => {
-      editInputRef.current?.focus();
-      editInputRef.current?.select();
+      const el = editInputRef.current;
+      if (el) {
+        el.focus();
+        // Place cursor at end instead of selecting all text
+        const len = el.value.length;
+        el.setSelectionRange(len, len);
+      }
     }, 0);
   }, [isEditing]);
 
@@ -235,10 +240,14 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
   const handleStartEditFollowUp = useCallback((followUpId: string, text: string) => {
     setEditingFollowUpId(followUpId);
     setEditingFollowUpText(text);
-    // Focus the input after render
+    // Focus the input after render, cursor at end
     window.setTimeout(() => {
-      editFollowUpInputRef.current?.focus();
-      editFollowUpInputRef.current?.select();
+      const el = editFollowUpInputRef.current;
+      if (el) {
+        el.focus();
+        const len = el.value.length;
+        el.setSelectionRange(len, len);
+      }
     }, 0);
   }, []);
 
@@ -322,7 +331,16 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
 
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+      const useCtrlEnter = e.ctrlKey || e.metaKey;
       handleFollowUpSubmit();
+      
+      // If Ctrl+Enter was used, focus the main QuickCapture input instead
+      if (useCtrlEnter) {
+        window.requestAnimationFrame(() => {
+          const mainInput = document.querySelector<HTMLInputElement>('.quick-capture-input');
+          mainInput?.focus();
+        });
+      }
     } else if (e.key === 'Escape') {
       setFollowUpText('');
       followUpInputRef.current?.blur();
@@ -335,9 +353,9 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
 
   // Handle left-click on the card to expand if it has follow-ups
   const handleCardClick = useCallback((e: React.MouseEvent) => {
-    // Don't expand if clicking on interactive elements or inside the follow-ups section
+    // Don't expand if clicking on interactive elements, text (for double-click edit), or follow-ups section
     const target = e.target as HTMLElement | null;
-    if (target && target.closest('button, input, textarea, a, .queue-item-actions, .queue-item-followups-section')) return;
+    if (target && target.closest('button, input, textarea, a, .queue-item-actions, .queue-item-followups-section, .queue-item-text')) return;
     
     // Only expand/collapse if there are follow-ups
     if (hasFollowUps) {
@@ -350,6 +368,13 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
       className={`queue-item-card ${item.isCompleted ? 'completed' : ''} ${isExpanded ? 'expanded' : ''} ${hasFollowUps ? 'has-followups' : ''}`}
       onContextMenu={handleRightClick}
       onClick={handleCardClick}
+      onMouseDown={(e) => {
+        // Blur any focused element (like edit textareas in other cards) when clicking this card
+        const target = e.target as HTMLElement;
+        if (!target.closest('textarea, input')) {
+          (document.activeElement as HTMLElement)?.blur?.();
+        }
+      }}
       role="group"
       aria-label="Queue item"
       title={hasFollowUps ? "Click to expand/collapse notes, right-click to copy" : "Right-click to copy and add a note"}
@@ -471,6 +496,18 @@ export const QueueItemCard: React.FC<QueueItemCardProps> = ({
                       <span className="follow-up-text">{followUp.text}</span>
                       <span className="follow-up-time">{formatRelativeTime(followUp.createdAt)}</span>
                       <span className="follow-up-copy-indicator">{copiedFollowUpId === followUp.id ? '[✓]' : '[⎘]'}</span>
+                      <button
+                        type="button"
+                        className="follow-up-delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newFollowUps = item.followUps.filter(fu => fu.id !== followUp.id);
+                          void onUpdateItem(item.id, { followUps: newFollowUps });
+                        }}
+                        title="Delete note"
+                      >
+                        [✕]
+                      </button>
                     </>
                   )}
                 </div>

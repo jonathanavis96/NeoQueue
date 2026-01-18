@@ -7,7 +7,7 @@
   bottom: 0;
   width: 100%;
   height: calc(100vh - 32px); /* Explicit height for canvas sizing */
-  z-index: 5; /* Between body background and UI elements (header/main are z-index: 10) */
+  z-index: 0; /* Behind all UI elements */
   pointer-events: none;
   /* Canvas is transparent - only the rain characters are drawn */
 }

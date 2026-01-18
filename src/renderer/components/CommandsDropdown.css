@@ -36,13 +36,13 @@
   right: 0;
   min-width: 300px;
   max-width: 400px;
-  max-height: 400px;
+  max-height: 60vh;
   overflow-y: auto;
   background-color: var(--matrix-dark);
   border: 1px solid var(--matrix-green-dark);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  z-index: 100;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+  z-index: 1000;
 }
 
 .commands-empty {

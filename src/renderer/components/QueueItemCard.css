@@ -63,6 +63,7 @@
   margin-bottom: var(--spacing-xs);
   word-wrap: break-word;
   overflow-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 .queue-item-text[title] {
@@ -241,6 +242,28 @@
 
 .follow-up-item.copied .follow-up-copy-indicator {
   opacity: 1;
+}
+
+.follow-up-delete {
+  background: none;
+  border: none;
+  color: var(--matrix-green);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+  padding: 0;
+  margin-left: 4px;
+}
+
+.follow-up-item:hover .follow-up-delete {
+  opacity: 0.6;
+}
+
+.follow-up-delete:hover {
+  opacity: 1 !important;
+  color: #ff4444;
 }
 
 /* Follow-up editing */

@@ -74,7 +74,17 @@ export const QuickCapture = forwardRef<QuickCaptureRef, QuickCaptureProps>(({ on
       setText('');
     } finally {
       setIsSubmitting(false);
-      textareaRef.current?.focus();
+      // Ensure focus returns to input after React re-render and any animations
+      // Use multiple attempts to guarantee focus
+      const refocus = () => {
+        if (textareaRef.current && document.activeElement !== textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      };
+      refocus();
+      window.setTimeout(refocus, 0);
+      window.setTimeout(refocus, 50);
+      window.requestAnimationFrame(refocus);
     }
   }, [text, onAdd, isSubmitting, disabled]);
 

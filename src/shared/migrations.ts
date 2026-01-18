@@ -12,7 +12,10 @@ import type {
   QueueItem,
   FollowUp,
   ExperimentalFlags,
+  Project,
+  SavedCommand,
 } from './types';
+import { DEFAULT_PROJECT_ID } from './types';
 
 const migrateLearnedDictionary = (raw: unknown): AppState['dictionary'] => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -50,14 +53,32 @@ const migrateSettings = (raw: unknown): AppState['settings'] => {
   const record = raw as Record<string, unknown>;
   const experimentalFlags = migrateExperimentalFlags(record.experimentalFlags);
 
-  if (!experimentalFlags) return undefined;
+  // Migrate matrixRain settings
+  let matrixRain: { enabled: boolean; intensity: number } | undefined;
+  if (record.matrixRain && typeof record.matrixRain === 'object') {
+    const mr = record.matrixRain as Record<string, unknown>;
+    matrixRain = {
+      enabled: coerceBoolean(mr.enabled, false),
+      intensity: typeof mr.intensity === 'number' ? mr.intensity : 15,
+    };
+  }
+
+  // Migrate activeProjectId
+  const activeProjectId = typeof record.activeProjectId === 'string' 
+    ? record.activeProjectId 
+    : undefined;
+
+  // Return settings if any field is present
+  if (!experimentalFlags && !matrixRain && !activeProjectId) return undefined;
 
   return {
     experimentalFlags,
+    matrixRain,
+    activeProjectId,
   };
 };
 
-export const CURRENT_APP_STATE_VERSION = 4;
+export const CURRENT_APP_STATE_VERSION = 5;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -144,6 +165,9 @@ const migrateQueueItem = (raw: unknown): QueueItem | null => {
     .map(migrateFollowUp)
     .filter((fu): fu is FollowUp => Boolean(fu));
 
+  // Project ID - default to DEFAULT_PROJECT_ID for legacy items
+  const projectId = coerceString(raw.projectId, DEFAULT_PROJECT_ID);
+
   return {
     id,
     text,
@@ -151,8 +175,44 @@ const migrateQueueItem = (raw: unknown): QueueItem | null => {
     completedAt,
     isCompleted,
     followUps,
+    projectId,
   };
 };
+
+const migrateProject = (raw: unknown): Project | null => {
+  if (!isRecord(raw)) return null;
+
+  const id = coerceString(raw.id, '').trim();
+  if (!id) return null;
+
+  const name = coerceString(raw.name, '').trim();
+  if (!name) return null;
+
+  const createdAt = coerceDate(raw.createdAt, new Date());
+  const isCompleted = coerceBoolean(raw.isCompleted, false);
+  
+  const completedAtRaw = raw.completedAt;
+  const completedAt =
+    completedAtRaw == null
+      ? undefined
+      : coerceDate(completedAtRaw, new Date());
+
+  return {
+    id,
+    name,
+    createdAt,
+    completedAt,
+    isCompleted,
+  };
+};
+
+/** Create the default project that always exists */
+const createDefaultProject = (): Project => ({
+  id: DEFAULT_PROJECT_ID,
+  name: 'Default',
+  createdAt: new Date(),
+  isCompleted: false,
+});
 
 /**
  * Best-effort migration/normalization for persisted or imported AppState.
@@ -201,14 +261,47 @@ export const migrateAppState = (raw: unknown): AppState => {
     return item;
   });
 
+  // Migrate projects - ensure Default project always exists
+  const projectsCandidate = (asObject as Record<string, unknown>).projects;
+  let projects: Project[] = [];
+  
+  if (Array.isArray(projectsCandidate)) {
+    projects = projectsCandidate
+      .map(migrateProject)
+      .filter((p): p is Project => Boolean(p));
+  }
+  
+  // Ensure Default project exists
+  if (!projects.find(p => p.id === DEFAULT_PROJECT_ID)) {
+    projects.unshift(createDefaultProject());
+  }
+
   const dictionary = migrateLearnedDictionary((asObject as Record<string, unknown>).dictionary);
   const settings = migrateSettings((asObject as Record<string, unknown>).settings);
+
+  // Migrate commands - preserve saved commands
+  const commandsCandidate = (asObject as Record<string, unknown>).commands;
+  let commands: SavedCommand[] = [];
+  
+  if (Array.isArray(commandsCandidate)) {
+    commands = commandsCandidate
+      .filter((cmd): cmd is Record<string, unknown> => 
+        cmd !== null && typeof cmd === 'object' && !Array.isArray(cmd))
+      .filter((cmd) => typeof cmd.id === 'string' && typeof cmd.text === 'string')
+      .map((cmd) => ({
+        id: cmd.id as string,
+        text: cmd.text as string,
+        createdAt: cmd.createdAt ? new Date(cmd.createdAt as string) : new Date(),
+      }));
+  }
 
   // Upgrade to current version.
   void fromVersion; // reserved for future stepwise migrations
 
   return {
     items: normalizedItems,
+    commands,
+    projects,
     dictionary,
     settings,
     version: CURRENT_APP_STATE_VERSION,

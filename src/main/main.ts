@@ -575,6 +575,7 @@ ipcMain.on(IPC_CHANNELS.WINDOW_MINIMIZE, () => {
 // Track maximize state manually since native APIs can be unreliable on WSL
 let isManuallyMaximized = false;
 let boundsBeforeMaximize: Electron.Rectangle | null = null;
+let isHandlingMaximizeEvent = false; // Prevent recursive event handling
 
 ipcMain.on(IPC_CHANNELS.WINDOW_MAXIMIZE, () => {
   if (!mainWindow) return;
@@ -585,19 +586,29 @@ ipcMain.on(IPC_CHANNELS.WINDOW_MAXIMIZE, () => {
     // RESTORE: Go back to previous size
     isManuallyMaximized = false;
     
-    if (boundsBeforeMaximize) {
-      mainWindow.setBounds(boundsBeforeMaximize);
-    } else {
-      // Fallback to sensible default
-      const currentDisplay = screen.getDisplayMatching(mainWindow.getBounds());
-      const workArea = currentDisplay.workArea;
-      mainWindow.setBounds({
-        x: workArea.x + 50,
-        y: workArea.y + 50,
+    // Get current display for fallback calculations
+    const currentDisplay = screen.getDisplayMatching(mainWindow.getBounds());
+    const workArea = currentDisplay.workArea;
+    
+    // Validate boundsBeforeMaximize - ensure it's visible and reasonable
+    let restoreBounds = boundsBeforeMaximize;
+    
+    if (!restoreBounds || 
+        restoreBounds.width < 400 || 
+        restoreBounds.height < 300 ||
+        restoreBounds.y < workArea.y ||
+        restoreBounds.x + restoreBounds.width < workArea.x + 50 ||
+        restoreBounds.x > workArea.x + workArea.width - 50) {
+      // Invalid or off-screen bounds - use centered default
+      restoreBounds = {
+        x: workArea.x + Math.round((workArea.width - 800) / 2),
+        y: workArea.y + Math.round((workArea.height - 600) / 2),
         width: Math.min(800, workArea.width - 100),
         height: Math.min(600, workArea.height - 100),
-      });
+      };
     }
+    
+    mainWindow.setBounds(restoreBounds);
     boundsBeforeMaximize = null;
   } else {
     // MAXIMIZE: Save current bounds and fill screen
@@ -718,8 +729,52 @@ const createWindow = (): void => {
   // Debounced to avoid excessive writes while the user is dragging the window.
   mainWindow.on('resize', () => scheduleWindowStateSave(mainWindow!));
   mainWindow.on('move', () => scheduleWindowStateSave(mainWindow!));
-  mainWindow.on('maximize', () => scheduleWindowStateSave(mainWindow!));
-  mainWindow.on('unmaximize', () => scheduleWindowStateSave(mainWindow!));
+  
+  // Sync our manual maximize tracking with native maximize events
+  // (e.g., when user double-clicks title bar or uses OS window controls)
+  mainWindow.on('maximize', () => {
+    // Prevent recursive handling
+    if (isHandlingMaximizeEvent) return;
+    isHandlingMaximizeEvent = true;
+    
+    try {
+      // On Linux/WSL, native maximize can cause issues with our frameless window
+      // Immediately unmaximize and apply our manual maximize instead
+      if (!isManuallyMaximized) {
+        boundsBeforeMaximize = mainWindow!.getNormalBounds();
+      }
+      
+      // Unmaximize the native state and apply manual full-screen bounds
+      mainWindow!.unmaximize();
+      isManuallyMaximized = true;
+      
+      const { screen } = require('electron');
+      const currentDisplay = screen.getDisplayMatching(boundsBeforeMaximize || mainWindow!.getBounds());
+      const workArea = currentDisplay.workArea;
+      
+      mainWindow!.setBounds({
+        x: workArea.x,
+        y: workArea.y,
+        width: workArea.width,
+        height: workArea.height,
+      });
+      
+      scheduleWindowStateSave(mainWindow!);
+    } finally {
+      isHandlingMaximizeEvent = false;
+    }
+  });
+  
+  mainWindow.on('unmaximize', () => {
+    // Ignore if we're in the middle of handling maximize (we triggered this unmaximize)
+    if (isHandlingMaximizeEvent) return;
+    
+    // Only reset if we're not manually maximized (i.e., this is a real unmaximize)
+    if (!isManuallyMaximized) {
+      boundsBeforeMaximize = null;
+    }
+    scheduleWindowStateSave(mainWindow!);
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;

@@ -12,6 +12,8 @@ import {
   ExportScope,
   ExportDateRange,
   ExportOptions,
+  Project,
+  DEFAULT_PROJECT_ID,
 } from '../../shared/types';
 import { CURRENT_APP_STATE_VERSION } from '../../shared/migrations';
 import { extractLearnedTokens } from '../../shared/dictionary';
@@ -29,7 +31,9 @@ interface UseQueueDataResult {
   error: string | null;
   /** Persisted app settings loaded from AppState (best-effort). */
   settings?: AppSettings;
-  addItem: (text: string) => Promise<void>;
+  /** All projects */
+  projects: Project[];
+  addItem: (text: string, projectId?: string) => Promise<void>;
   updateItem: (id: string, updates: Partial<QueueItem>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
   toggleComplete: (id: string) => Promise<void>;
@@ -54,6 +58,18 @@ interface UseQueueDataResult {
   editCommand: (id: string, text: string) => Promise<void>;
   deleteCommand: (id: string) => Promise<void>;
   reorderCommands: (newCommands: SavedCommand[]) => Promise<void>;
+  /** Project management */
+  addProject: (name: string) => Promise<void>;
+  renameProject: (projectId: string, newName: string) => Promise<void>;
+  deleteProject: (projectId: string) => Promise<void>;
+  markProjectComplete: (projectId: string) => Promise<void>;
+  reactivateProject: (projectId: string) => Promise<void>;
+  /** Reorder projects via drag-and-drop */
+  reorderProjects: (newProjects: Project[]) => Promise<void>;
+  /** Move an item to a different project */
+  moveItemToProject: (itemId: string, targetProjectId: string) => Promise<void>;
+  /** Update settings (e.g., activeProjectId) */
+  updateSettings: (updates: Partial<AppSettings>) => Promise<void>;
 }
 
 // Generate a simple UUID (v4-like)
@@ -65,9 +81,18 @@ const generateId = (): string => {
   });
 };
 
+/** Create the default project */
+const createDefaultProject = (): Project => ({
+  id: DEFAULT_PROJECT_ID,
+  name: 'Default',
+  createdAt: new Date(),
+  isCompleted: false,
+});
+
 export const useQueueData = (): UseQueueDataResult => {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [commands, setCommands] = useState<SavedCommand[]>([]);
+  const [projects, setProjects] = useState<Project[]>([createDefaultProject()]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [undoSnapshot, setUndoSnapshot] = useState<UndoSnapshot | null>(null);
@@ -113,6 +138,19 @@ export const useQueueData = (): UseQueueDataResult => {
             createdAt: new Date(cmd.createdAt),
           }));
           setCommands(commandsWithDates);
+
+          // Load projects
+          const rawProjects = response.data.projects ?? [];
+          let projectsWithDates = rawProjects.map((proj) => ({
+            ...proj,
+            createdAt: new Date(proj.createdAt),
+            completedAt: proj.completedAt ? new Date(proj.completedAt) : undefined,
+          }));
+          // Ensure default project exists
+          if (!projectsWithDates.find(p => p.id === DEFAULT_PROJECT_ID)) {
+            projectsWithDates = [createDefaultProject(), ...projectsWithDates];
+          }
+          setProjects(projectsWithDates);
         } else if (!response.success) {
           setError(response.error || 'Failed to load data');
         }
@@ -132,38 +170,48 @@ export const useQueueData = (): UseQueueDataResult => {
   }, []);
 
   // Build AppState (used for save + export)
-  const buildAppState = useCallback(
-    (newItems: QueueItem[], nextSettings: AppSettings | undefined, newCommands?: SavedCommand[]): AppState => {
+  // Note: This is a pure function for building export states - doesn't use current state as defaults
+  const buildAppStateForExport = useCallback(
+    (exportItems: QueueItem[], exportSettings: AppSettings | undefined, exportCommands?: SavedCommand[], exportProjects?: Project[]): AppState => {
       return {
-        items: newItems,
-        commands: newCommands,
-        dictionary: { tokens: extractLearnedTokens(newItems) },
-        settings: nextSettings,
+        items: exportItems,
+        commands: exportCommands,
+        projects: exportProjects,
+        dictionary: { tokens: extractLearnedTokens(exportItems) },
+        settings: exportSettings,
         version: CURRENT_APP_STATE_VERSION,
       };
     },
     []
   );
 
-  // Save data helper
+  // Save data helper - uses current state as defaults for commands and projects
   const saveData = useCallback(
-    async (newItems: QueueItem[], nextSettings: AppSettings | undefined, newCommands?: SavedCommand[]) => {
+    async (newItems: QueueItem[], nextSettings: AppSettings | undefined, newCommands?: SavedCommand[], newProjects?: Project[]) => {
       // Guard against missing electronAPI
       if (!window.electronAPI?.saveData) {
         throw new Error('Cannot save: app not running in Electron context');
       }
 
-      const appState = buildAppState(newItems, nextSettings, newCommands);
+      // Use current state as defaults if not provided
+      const appState: AppState = {
+        items: newItems,
+        commands: newCommands ?? commands,
+        projects: newProjects ?? projects,
+        dictionary: { tokens: extractLearnedTokens(newItems) },
+        settings: nextSettings,
+        version: CURRENT_APP_STATE_VERSION,
+      };
       const response = await window.electronAPI.saveData(appState);
       if (!response.success) {
         throw new Error(response.error || 'Failed to save data');
       }
     },
-    [buildAppState]
+    [commands, projects]
   );
 
   // Add a new item
-  const addItem = useCallback(async (text: string) => {
+  const addItem = useCallback(async (text: string, projectId: string = DEFAULT_PROJECT_ID) => {
     const trimmed = text.trim();
     if (!trimmed) return;
 
@@ -174,20 +222,32 @@ export const useQueueData = (): UseQueueDataResult => {
       createdAt: new Date(),
       isCompleted: false,
       followUps: [],
+      projectId,
     };
 
-    const newItems = [newItem, ...prevItems];
+    const newItems = [...prevItems, newItem];
     setItems(newItems);
 
+    // If adding to a completed project, reactivate it
+    let updatedProjects = projects;
+    const targetProject = projects.find(p => p.id === projectId);
+    if (targetProject?.isCompleted) {
+      updatedProjects = projects.map(p =>
+        p.id === projectId ? { ...p, isCompleted: false, completedAt: undefined } : p
+      );
+      setProjects(updatedProjects);
+    }
+
     try {
-      await saveData(newItems, settings, commands);
+      await saveData(newItems, settings, commands, updatedProjects);
       setUndoSnapshot({ items: prevItems, label: 'add' });
     } catch (err) {
       // Rollback on error
       setItems(prevItems);
+      setProjects(projects);
       setError(String(err));
     }
-  }, [commands, items, saveData, settings]);
+  }, [commands, items, projects, saveData, settings]);
 
   // Update an existing item
   const updateItem = useCallback(async (id: string, updates: Partial<QueueItem>) => {
@@ -338,8 +398,8 @@ export const useQueueData = (): UseQueueDataResult => {
 
     const finalItems = dateRange ? applyDateRange(scopeItems, dateRange) : scopeItems;
 
-    return buildAppState(finalItems, settings, commands);
-  }, [applyDateRange, buildAppState, commands, items, settings]);
+    return buildAppStateForExport(finalItems, settings, commands, projects);
+  }, [applyDateRange, buildAppStateForExport, commands, items, projects, settings]);
 
   const exportJsonScopedDateRange = useCallback(
     async (scope: ExportScope, dateRange: ExportDateRange) => {
@@ -572,12 +632,158 @@ export const useQueueData = (): UseQueueDataResult => {
 
   const dictionaryTokens = useMemo(() => extractLearnedTokens(items), [items]);
 
+  // Project management functions
+  const addProject = useCallback(async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    const newProject: Project = {
+      id: generateId(),
+      name: trimmed,
+      createdAt: new Date(),
+      isCompleted: false,
+    };
+
+    const newProjects = [...projects, newProject];
+    setProjects(newProjects);
+
+    try {
+      await saveData(items, settings, commands, newProjects);
+    } catch (err) {
+      setProjects(projects);
+      setError(String(err));
+    }
+  }, [commands, items, projects, saveData, settings]);
+
+  const renameProject = useCallback(async (projectId: string, newName: string) => {
+    if (projectId === DEFAULT_PROJECT_ID) return;
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+
+    const newProjects = projects.map(p =>
+      p.id === projectId ? { ...p, name: trimmed } : p
+    );
+    setProjects(newProjects);
+
+    try {
+      await saveData(items, settings, commands, newProjects);
+    } catch (err) {
+      setProjects(projects);
+      setError(String(err));
+    }
+  }, [commands, items, projects, saveData, settings]);
+
+  const deleteProject = useCallback(async (projectId: string) => {
+    if (projectId === DEFAULT_PROJECT_ID) return;
+
+    // Move items from deleted project to Default
+    const newItems = items.map(item =>
+      item.projectId === projectId ? { ...item, projectId: DEFAULT_PROJECT_ID } : item
+    );
+    const newProjects = projects.filter(p => p.id !== projectId);
+
+    setItems(newItems);
+    setProjects(newProjects);
+
+    try {
+      await saveData(newItems, settings, commands, newProjects);
+    } catch (err) {
+      setItems(items);
+      setProjects(projects);
+      setError(String(err));
+    }
+  }, [commands, items, projects, saveData, settings]);
+
+  const markProjectComplete = useCallback(async (projectId: string) => {
+    if (projectId === DEFAULT_PROJECT_ID) return;
+
+    const newProjects = projects.map(p =>
+      p.id === projectId ? { ...p, isCompleted: true, completedAt: new Date() } : p
+    );
+    setProjects(newProjects);
+
+    try {
+      await saveData(items, settings, commands, newProjects);
+    } catch (err) {
+      setProjects(projects);
+      setError(String(err));
+    }
+  }, [commands, items, projects, saveData, settings]);
+
+  const reactivateProject = useCallback(async (projectId: string) => {
+    const newProjects = projects.map(p =>
+      p.id === projectId ? { ...p, isCompleted: false, completedAt: undefined } : p
+    );
+    setProjects(newProjects);
+
+    try {
+      await saveData(items, settings, commands, newProjects);
+    } catch (err) {
+      setProjects(projects);
+      setError(String(err));
+    }
+  }, [commands, items, projects, saveData, settings]);
+
+  const reorderProjects = useCallback(async (newProjects: Project[]) => {
+    const prevProjects = projects;
+    setProjects(newProjects);
+
+    try {
+      await saveData(items, settings, commands, newProjects);
+    } catch (err) {
+      setProjects(prevProjects);
+      setError(String(err));
+    }
+  }, [commands, items, projects, saveData, settings]);
+
+  const updateSettings = useCallback(async (updates: Partial<AppSettings>) => {
+    const newSettings = { ...settings, ...updates };
+    setSettings(newSettings);
+
+    try {
+      await saveData(items, newSettings, commands, projects);
+    } catch (err) {
+      setSettings(settings);
+      setError(String(err));
+    }
+  }, [commands, items, projects, saveData, settings]);
+
+  const moveItemToProject = useCallback(async (itemId: string, targetProjectId: string) => {
+    const item = items.find(i => i.id === itemId);
+    if (!item || item.projectId === targetProjectId) return;
+
+    const newItems = items.map(i =>
+      i.id === itemId ? { ...i, projectId: targetProjectId } : i
+    );
+    setItems(newItems);
+
+    // If moving to a completed project, reactivate it
+    let updatedProjects = projects;
+    const targetProject = projects.find(p => p.id === targetProjectId);
+    if (targetProject?.isCompleted) {
+      updatedProjects = projects.map(p =>
+        p.id === targetProjectId ? { ...p, isCompleted: false, completedAt: undefined } : p
+      );
+      setProjects(updatedProjects);
+    }
+
+    try {
+      await saveData(newItems, settings, commands, updatedProjects);
+      setUndoSnapshot({ items, label: 'move' });
+    } catch (err) {
+      setItems(items);
+      setProjects(projects);
+      setError(String(err));
+    }
+  }, [commands, items, projects, saveData, settings]);
+
   return {
     items,
     dictionaryTokens,
     isLoading,
     error,
     settings,
+    projects,
     addItem,
     updateItem,
     deleteItem,
@@ -600,5 +806,13 @@ export const useQueueData = (): UseQueueDataResult => {
     editCommand,
     deleteCommand,
     reorderCommands,
+    addProject,
+    renameProject,
+    deleteProject,
+    markProjectComplete,
+    reactivateProject,
+    reorderProjects,
+    moveItemToProject,
+    updateSettings,
   };
 };

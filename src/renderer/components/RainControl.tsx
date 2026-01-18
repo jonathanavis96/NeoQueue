@@ -22,9 +22,14 @@ export const RainControl: React.FC<RainControlProps> = ({
 }) => {
   const [showSlider, setShowSlider] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isInitialMount = useRef(true);
 
-  // Show slider when rain is enabled
+  // Show slider when rain is toggled on (but not on initial load)
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     if (enabled) {
       setShowSlider(true);
     }

@@ -19,6 +19,21 @@ export interface SavedCommand {
 }
 
 /**
+ * Represents a project/category that groups queue items
+ */
+export interface Project {
+  id: string;
+  name: string;
+  createdAt: Date;
+  /** When all queue items are discussed and user marks project complete */
+  completedAt?: Date;
+  isCompleted: boolean;
+}
+
+/** The default project ID - cannot be deleted */
+export const DEFAULT_PROJECT_ID = 'default';
+
+/**
  * Represents a discussion item in the queue
  */
 export interface QueueItem {
@@ -28,6 +43,8 @@ export interface QueueItem {
   completedAt?: Date;
   isCompleted: boolean;
   followUps: FollowUp[];
+  /** Project this item belongs to. Defaults to DEFAULT_PROJECT_ID */
+  projectId: string;
 }
 
 /**
@@ -65,11 +82,17 @@ export interface AppSettings {
     /** Intensity from 0-100, default 15 */
     intensity: number;
   };
+  /**
+   * Last active project ID for restoring state on app restart.
+   */
+  activeProjectId?: string;
 }
 
 export interface AppState {
   items: QueueItem[];
   commands?: SavedCommand[];
+  /** Projects/categories for organizing items */
+  projects?: Project[];
   version: number;
   dictionary: LearnedDictionary;
   settings?: AppSettings;

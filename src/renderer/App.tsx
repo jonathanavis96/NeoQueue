@@ -1,9 +1,10 @@
 import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import './styles/App.css';
 import { useQueueData, useKeyboardShortcuts, useUiEffects, useExperimentalFlags } from './hooks';
-import { QuickCapture, SearchBox, QueueItemList, HelpPanel, TitleBar, CommandsDropdown, MatrixRainBackground, RainControl } from './components';
+import { QuickCapture, SearchBox, QueueItemList, HelpPanel, TitleBar, CommandsDropdown, MatrixRainBackground, RainControl, ProjectTabs } from './components';
 import type { QuickCaptureRef } from './components/QuickCapture';
 import type { SearchBoxRef } from './components/SearchBox';
+import { DEFAULT_PROJECT_ID } from '../shared/types';
 
 const HELP_DISMISSED_KEY = 'neoqueue.help.dismissed';
 
@@ -34,14 +35,39 @@ const App: React.FC = () => {
     editCommand,
     deleteCommand,
     reorderCommands,
+    projects,
+    addProject,
+    renameProject,
+    deleteProject,
+    markProjectComplete,
+    reactivateProject,
+    reorderProjects,
+    moveItemToProject,
+    settings,
+    updateSettings,
   } = useQueueData();
 
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'queue' | 'discussed'>('queue');
-  const [matrixRainEnabled, setMatrixRainEnabled] = useState(false);
-  const [matrixRainIntensity, setMatrixRainIntensity] = useState(15);
+  const [matrixRainEnabled, setMatrixRainEnabled] = useState(() => {
+    try {
+      return window.localStorage.getItem('neoqueue-rain-enabled') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [matrixRainIntensity, setMatrixRainIntensity] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem('neoqueue-rain-intensity');
+      return saved ? parseInt(saved, 10) : 15;
+    } catch {
+      return 15;
+    }
+  });
+  const [activeProjectId, setActiveProjectId] = useState<string>(DEFAULT_PROJECT_ID);
+  const [showingCompleted, setShowingCompleted] = useState(false);
 
   const { flags: experimentalFlags, setFlag: setExperimentalFlag } = useExperimentalFlags();
 
@@ -63,6 +89,19 @@ const App: React.FC = () => {
       setIsHelpOpen(true);
     }
   }, []);
+
+  // Persist rain settings
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('neoqueue-rain-enabled', String(matrixRainEnabled));
+    } catch { /* ignore */ }
+  }, [matrixRainEnabled]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('neoqueue-rain-intensity', String(matrixRainIntensity));
+    } catch { /* ignore */ }
+  }, [matrixRainIntensity]);
 
   // PIN state is now manual only - just a visual reminder toggle
   // No automatic detection since PowerToys controls the actual always-on-top state
@@ -136,12 +175,39 @@ const App: React.FC = () => {
     onUndo: handleUndo,
   });
 
+  // Restore activeProjectId from settings on load
+  useEffect(() => {
+    if (settings?.activeProjectId && projects.find(p => p.id === settings.activeProjectId)) {
+      setActiveProjectId(settings.activeProjectId);
+    }
+  }, [settings?.activeProjectId, projects]);
+
+  // Save activeProjectId when it changes
+  const handleSelectProject = useCallback((projectId: string) => {
+    setActiveProjectId(projectId);
+    setShowingCompleted(false);
+    void updateSettings({ ...settings, activeProjectId: projectId });
+  }, [settings, updateSettings]);
+
+  const handleShowCompleted = useCallback(() => {
+    setShowingCompleted(true);
+  }, []);
+
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
-  const filteredItems = useMemo(() => {
-    if (!normalizedQuery) return items;
+  // Filter items by project first, then by search query
+  const projectFilteredItems = useMemo(() => {
+    if (showingCompleted) {
+      // When showing completed projects view, don't filter by project
+      return items;
+    }
+    return items.filter(item => item.projectId === activeProjectId);
+  }, [items, activeProjectId, showingCompleted]);
 
-    return items.filter((item) => {
+  const filteredItems = useMemo(() => {
+    if (!normalizedQuery) return projectFilteredItems;
+
+    return projectFilteredItems.filter((item) => {
       const itemText = item.text.toLowerCase();
       if (itemText.includes(normalizedQuery)) return true;
 
@@ -163,14 +229,14 @@ const App: React.FC = () => {
 
       return timestampText.includes(normalizedQuery);
     });
-  }, [items, normalizedQuery]);
+  }, [projectFilteredItems, normalizedQuery]);
 
   const hasActiveSearch = normalizedQuery.length > 0;
 
   const addItemWithFx = useCallback(async (text: string) => {
     triggerPulse('add');
-    await addItem(text);
-  }, [addItem, triggerPulse]);
+    await addItem(text, activeProjectId);
+  }, [addItem, activeProjectId, triggerPulse]);
 
   return (
     <div
@@ -237,6 +303,19 @@ const App: React.FC = () => {
             </button>
           </div>
         </div>
+        
+        <ProjectTabs
+          projects={projects}
+          activeProjectId={activeProjectId}
+          showingCompleted={showingCompleted}
+          onSelectProject={handleSelectProject}
+          onShowCompleted={handleShowCompleted}
+          onAddProject={addProject}
+          onRenameProject={renameProject}
+          onDeleteProject={deleteProject}
+          onMoveItemToProject={moveItemToProject}
+          onReorderProjects={reorderProjects}
+        />
       </header>
 
       <HelpPanel
@@ -372,19 +451,67 @@ const App: React.FC = () => {
           </div>
         )}
         
-        <QueueItemList
-          items={filteredItems}
-          dictionary={dictionaryTokens}
-          hasUnfilteredItems={items.length > 0}
-          hasActiveSearch={hasActiveSearch}
-          onTabChange={handleTabChange}
-          onToggleComplete={toggleComplete}
-          onDelete={deleteItem}
-          onAddFollowUp={addFollowUp}
-          onUpdateItem={updateItem}
-          onReorderItems={reorderItems}
-          isLoading={isLoading}
-        />
+        {/* Show completed projects list or regular queue */}
+        {showingCompleted ? (
+          <div className="completed-projects-view">
+            <h2 className="completed-projects-title">Completed Projects</h2>
+            {projects.filter(p => p.isCompleted).length === 0 ? (
+              <p className="completed-projects-empty">No completed projects yet.</p>
+            ) : (
+              <ul className="completed-projects-list">
+                {projects.filter(p => p.isCompleted).map(project => (
+                  <li key={project.id} className="completed-project-item">
+                    <button
+                      className="completed-project-button"
+                      onClick={() => {
+                        handleSelectProject(project.id);
+                      }}
+                    >
+                      <span className="completed-project-name">{project.name}</span>
+                      {project.completedAt && (
+                        <span className="completed-project-date">
+                          Completed {new Date(project.completedAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Mark as Complete button - show when queue is empty for non-default project */}
+            {activeProjectId !== DEFAULT_PROJECT_ID && 
+             projectFilteredItems.filter(i => !i.isCompleted).length === 0 &&
+             projectFilteredItems.length > 0 && (
+              <div className="mark-complete-banner">
+                <span>All items discussed! </span>
+                <button
+                  className="mark-complete-button"
+                  onClick={() => markProjectComplete(activeProjectId)}
+                >
+                  Mark Project as Complete
+                </button>
+              </div>
+            )}
+            <QueueItemList
+              items={filteredItems}
+              dictionary={dictionaryTokens}
+              hasUnfilteredItems={projectFilteredItems.length > 0}
+              hasActiveSearch={hasActiveSearch}
+              activeProjectId={activeProjectId}
+              onTabChange={handleTabChange}
+              onToggleComplete={toggleComplete}
+              onDelete={deleteItem}
+              onAddFollowUp={addFollowUp}
+              onUpdateItem={updateItem}
+              onReorderItems={reorderItems}
+              onMoveItemToProject={moveItemToProject}
+              isLoading={isLoading}
+            />
+          </>
+        )}
       </main>
       
       {/* Keyboard shortcuts hint */}
