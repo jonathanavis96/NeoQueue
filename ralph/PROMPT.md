@@ -4,7 +4,9 @@ You are Ralph. Mode is passed by loop.sh header.
 
 ## Core Mechanics
 
-Read `../brain/ralph/PROMPT.md` for full Ralph loop mechanics (PLANNING vs BUILDING modes, commit flow, stop conditions).
+Read `$BRAIN_ROOT/ralph/PROMPT.md` for full Ralph loop mechanics (PLANNING vs BUILDING modes, commit flow, stop conditions).
+
+> **Note**: `BRAIN_ROOT` defaults to `../brain` (sibling directory). Override via env var if brain is elsewhere.
 
 ## Project Context Files
 
@@ -18,8 +20,8 @@ Read `../brain/ralph/PROMPT.md` for full Ralph loop mechanics (PLANNING vs BUILD
 ## Brain Knowledge Base
 
 For patterns and best practices, use progressive disclosure:
-1. `../brain/kb/SUMMARY.md` - Knowledge base overview
-2. `../brain/references/react-best-practices/HOTLIST.md` - Top 10 rules (covers 80%)
+1. `$BRAIN_ROOT/kb/SUMMARY.md` - Knowledge base overview
+2. `$BRAIN_ROOT/references/react-best-practices/HOTLIST.md` - Top 10 rules (covers 80%)
 3. Specific rule files only if HOTLIST doesn't cover your scenario
 
 ❌ Never scan all rules by default

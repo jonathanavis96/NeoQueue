@@ -3,11 +3,15 @@
 # This keeps the single source of truth in brain/ralph/loop.sh
 set -euo pipefail
 
+# Find project root: try git first, fall back to script directory
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || \
+  PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || \
+  PROJECT_ROOT="$(pwd)"
+
 # Find brain directory (configurable via env var, defaults to sibling directory)
-PROJECT_ROOT="$(git rev-parse --show-toplevel)"
 BRAIN_ROOT="${BRAIN_ROOT:-$PROJECT_ROOT/../brain}"
 
-# Verify brain exists
+# Verify brain directory exists
 if [[ ! -d "$BRAIN_ROOT/ralph" ]]; then
   echo "ERROR: Brain repository not found at: $BRAIN_ROOT"
   echo ""
@@ -17,9 +21,21 @@ if [[ ! -d "$BRAIN_ROOT/ralph" ]]; then
   exit 1
 fi
 
+# Verify brain entrypoint is present and executable
+BRAIN_LOOP="$BRAIN_ROOT/ralph/loop.sh"
+if [[ ! -x "$BRAIN_LOOP" ]]; then
+  echo "ERROR: Brain loop script missing or not executable: $BRAIN_LOOP"
+  echo ""
+  echo "Fix with:"
+  echo "  chmod +x $BRAIN_LOOP"
+  echo "Or set BRAIN_ROOT to correct location:"
+  echo "  BRAIN_ROOT=/path/to/brain ./loop.sh"
+  exit 1
+fi
+
 # Export brain repo for commit trailers (can be overridden)
 export BRAIN_REPO="${BRAIN_REPO:-jonathanavis96/brain}"
 
 # Delegate to brain's loop.sh with project context
 export RALPH_PROJECT_ROOT="$PROJECT_ROOT"
-exec "$BRAIN_ROOT/ralph/loop.sh" "$@"
+exec "$BRAIN_LOOP" "$@"
