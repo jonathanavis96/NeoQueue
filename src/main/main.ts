@@ -283,33 +283,116 @@ const scheduleSecondaryBackup = (data: AppState, debounceMs = 1500): void => {
   }, debounceMs);
 };
 
+
+// ============================================================================
+// DATA PROTECTION: Prevent data loss on crash/restart
+// ============================================================================
+
+const DATA_STORE_PATH = path.join(app.getPath('userData'), 'neoqueue-data.json');
+
+/** Create a timestamped backup in the backup directory. */
+const createTimestampedBackup = async (data: AppState, prefix = 'backup'): Promise<void> => {
+  try {
+    const backupDir = getBackupDir();
+    await fs.promises.mkdir(backupDir, { recursive: true });
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filePath = path.join(backupDir, `${prefix}-${timestamp}.json`);
+    await fs.promises.writeFile(filePath, serializeAppState(data), { encoding: 'utf8' });
+    await cleanupOldBackups(backupDir, 20);
+  } catch (error) {
+    console.warn('Failed to create timestamped backup:', error);
+  }
+};
+
+/** Remove old backup files, keeping only the most recent N files. */
+const cleanupOldBackups = async (dir: string, keepCount: number): Promise<void> => {
+  try {
+    const files = await fs.promises.readdir(dir);
+    const backupFiles = files.filter(f => f.match(/^(backup|startup|pre-save|shutdown|emergency)-.*\.json$/)).sort().reverse();
+    for (const file of backupFiles.slice(keepCount)) {
+      await fs.promises.unlink(path.join(dir, file)).catch(() => {});
+    }
+  } catch { /* ignore */ }
+};
+
+/** Create a startup backup before any loading/migration. */
+const createStartupBackup = async (): Promise<void> => {
+  try {
+    const rawData = await fs.promises.readFile(DATA_STORE_PATH, 'utf8').catch(() => null);
+    if (!rawData) return;
+    const parsed = JSON.parse(rawData);
+    const appState = parsed?.appState;
+    if (appState?.items?.length > 0) {
+      await createTimestampedBackup(appState, 'startup');
+      console.log(`[NeoQueue] Startup backup: ${appState.items.length} items`);
+    }
+  } catch (error) {
+    console.warn('[NeoQueue] Startup backup failed:', error);
+  }
+};
+
+/** Validate that new data doesn't represent catastrophic loss. */
+const validateDataBeforeSave = (newData: AppState, existingData: AppState | null): { valid: boolean; reason?: string } => {
+  if (!existingData) return { valid: true };
+  const existingCount = existingData.items?.length ?? 0;
+  const newCount = newData.items?.length ?? 0;
+  if (existingCount > 5 && newCount === 0) {
+    return { valid: false, reason: `Blocked: would delete all ${existingCount} items` };
+  }
+  return { valid: true };
+};
+
+// State tracking for data protection
+let lastKnownGoodState: AppState | null = null;
+let startupBackupDone = false;
+let lastPreSaveBackupTime: number | null = null;
 // IPC Handlers for data persistence
 ipcMain.handle(IPC_CHANNELS.SAVE_DATA, async (_event, data: AppState) => {
   try {
+    // Validate before saving to prevent catastrophic data loss
+    const validation = validateDataBeforeSave(data, lastKnownGoodState);
+    if (!validation.valid) {
+      console.error(`[NeoQueue] ${validation.reason}`);
+      if (lastKnownGoodState) await createTimestampedBackup(lastKnownGoodState, 'emergency');
+      return { success: false, error: validation.reason };
+    }
+
+    // Create periodic pre-save backup (every 5 minutes max)
+    const existingCount = lastKnownGoodState?.items?.length ?? 0;
+    if (existingCount > 0) {
+      const now = Date.now();
+      if (!lastPreSaveBackupTime || now - lastPreSaveBackupTime > 5 * 60 * 1000) {
+        await createTimestampedBackup(lastKnownGoodState!, 'pre-save');
+        lastPreSaveBackupTime = now;
+      }
+    }
+
     store.set('appState', data);
-
-    // Best-effort secondary backup. Never fail the main save if backup fails.
+    lastKnownGoodState = data;
     scheduleSecondaryBackup(data);
-
     return { success: true };
   } catch (error) {
-    console.error('Failed to save data:', error);
+    console.error('[NeoQueue] Failed to save data:', error);
     return { success: false, error: String(error) };
   }
 });
 
 ipcMain.handle(IPC_CHANNELS.LOAD_DATA, async () => {
   try {
-    const raw = store.get('appState');
+    // Create startup backup on first load (before migration)
+    if (!startupBackupDone) {
+      await createStartupBackup();
+      startupBackupDone = true;
+    }
 
-    // Defensive migration: older store files (or corrupted data) shouldn't crash the app.
-    // If migration succeeds and produces a normalized shape, persist it back.
+    const raw = store.get('appState');
     const migrated = migrateAppState(raw);
     store.set('appState', migrated);
-
+    lastKnownGoodState = migrated;
+    console.log(`[NeoQueue] Loaded ${migrated.items?.length ?? 0} items`);
     return { success: true, data: migrated };
   } catch (error) {
-    console.error('Failed to load data:', error);
+    console.error('[NeoQueue] Failed to load data:', error);
     return { success: false, error: String(error) };
   }
 });
@@ -995,11 +1078,24 @@ app.on('window-all-closed', () => {
 });
 
 // Mark that we are intentionally quitting (not just hiding on close-to-tray).
-app.on('before-quit', () => {
+app.on('before-quit', async () => {
   isQuitting = true;
+  // Flush pending backup immediately
+  if (pendingBackupTimer) {
+    clearTimeout(pendingBackupTimer);
+    pendingBackupTimer = null;
+  }
+  if (latestBackupPayload) {
+    console.log('[NeoQueue] Flushing backup before quit...');
+    await writeBackupNow(latestBackupPayload);
+  }
+  // Create shutdown backup
+  if (lastKnownGoodState?.items?.length) {
+    await createTimestampedBackup(lastKnownGoodState, 'shutdown');
+    console.log('[NeoQueue] Shutdown backup created');
+  }
 });
 
-// Unregister shortcuts when app is about to quit
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
 });

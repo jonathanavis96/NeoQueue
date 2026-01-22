@@ -1,0 +1,4 @@
+# Keep backup folder but ignore backup files
+*.json
+*.log
+!.gitignore
