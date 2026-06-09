@@ -57,6 +57,9 @@ export const MatrixRainBackground = memo(({ intensity }: MatrixRainBackgroundPro
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Flag to prevent orphan animation loops on cleanup
+    let cancelled = false;
+
     // Character sizing
     const CHAR_SIZE = 18; // Font size in pixels
     const CHAR_HEIGHT = CHAR_SIZE * 1.2; // Line height
@@ -143,6 +146,9 @@ export const MatrixRainBackground = memo(({ intensity }: MatrixRainBackgroundPro
     window.addEventListener('resize', resizeCanvas);
 
     const animate = (timestamp: number) => {
+      // Bail out if effect was cleaned up
+      if (cancelled) return;
+
       // Calculate delta time for smooth animation
       const deltaTime = lastTimeRef.current ? (timestamp - lastTimeRef.current) / 16.67 : 1;
       lastTimeRef.current = timestamp;
@@ -252,6 +258,7 @@ export const MatrixRainBackground = memo(({ intensity }: MatrixRainBackgroundPro
     animationRef.current = requestAnimationFrame(animate);
 
     return () => {
+      cancelled = true;
       window.removeEventListener('resize', resizeCanvas);
       cancelAnimationFrame(animationRef.current);
     };

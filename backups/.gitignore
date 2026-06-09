@@ -1,4 +1,5 @@
-# Keep backup folder but ignore backup files
+# Keep backup folder structure but ignore backup data files
 *.json
 *.log
+!README.md
 !.gitignore

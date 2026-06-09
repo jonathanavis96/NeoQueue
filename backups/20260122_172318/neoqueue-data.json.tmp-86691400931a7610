@@ -1,0 +1,103 @@
+{
+	"appState": {
+		"items": [
+			{
+				"id": "24c04581-dd43-48b5-a484-5ed83090cc50",
+				"text": "I created the NeoQueue repo but still see that the Ralph under NeoQueue project is not committing to it after each iteration (should be in the -work). Please chat with me on what needs to be changed to ensure that this works.",
+				"createdAt": "2026-01-17T16:51:42.904Z",
+				"isCompleted": false,
+				"followUps": [
+					{
+						"id": "cb9353d2-a973-4b92-8499-7f79eb34f0ca",
+						"text": "Testing new note 1",
+						"createdAt": "2026-01-17T16:52:02.504Z"
+					}
+				]
+			},
+			{
+				"id": "74fe2c4a-c562-40c8-ae4d-d5aada49a212",
+				"text": "Okay hey now",
+				"createdAt": "2026-01-17T16:34:33.031Z",
+				"isCompleted": false,
+				"followUps": []
+			},
+			{
+				"id": "90103421-49ec-4882-94cc-d82a13213e1f",
+				"text": "Testing out the new notes",
+				"createdAt": "2026-01-17T16:32:56.822Z",
+				"isCompleted": false,
+				"followUps": [
+					{
+						"id": "271bd3d9-b6c6-4f3e-b952-34dabfec84a7",
+						"text": "Testing follow up notes now",
+						"createdAt": "2026-01-17T16:33:49.283Z"
+					}
+				]
+			}
+		],
+		"dictionary": {
+			"tokens": [
+				"-work",
+				"after",
+				"but",
+				"changed",
+				"chat",
+				"committing",
+				"created",
+				"each",
+				"ensure",
+				"follow",
+				"hey",
+				"iteration",
+				"needs",
+				"NeoQueue",
+				"new",
+				"not",
+				"note",
+				"notes",
+				"now",
+				"Okay",
+				"out",
+				"Please",
+				"project",
+				"Ralph",
+				"repo",
+				"see",
+				"should",
+				"still",
+				"Testing",
+				"that",
+				"the",
+				"this",
+				"under",
+				"what",
+				"with",
+				"works."
+			]
+		},
+		"settings": {
+			"canvasLayout": {
+				"positions": {
+					"74fe2c4a-c562-40c8-ae4d-d5aada49a212": {
+						"leftPct": 18.071584555040044,
+						"topPct": 42.452257355746
+					}
+				}
+			}
+		},
+		"version": 4
+	},
+	"settings": {
+		"closeToTray": false,
+		"alwaysOnTop": false
+	},
+	"windowState": {
+		"bounds": {
+			"x": 306,
+			"y": 278,
+			"width": 1128,
+			"height": 1118
+		},
+		"isMaximized": true
+	}
+}

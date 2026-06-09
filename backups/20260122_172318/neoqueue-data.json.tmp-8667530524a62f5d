@@ -1,0 +1,22 @@
+{
+	"appState": {
+		"items": [],
+		"version": 2,
+		"dictionary": {
+			"tokens": []
+		}
+	},
+	"settings": {
+		"closeToTray": false,
+		"alwaysOnTop": false
+	},
+	"windowState": {
+		"bounds": {
+			"x": 32,
+			"y": 32,
+			"width": 1128,
+			"height": 1118
+		},
+		"isMaximized": true
+	}
+}
