@@ -11,6 +11,7 @@
     "build:electron": "tsc -p tsconfig.main.json",
     "type-check": "tsc --noEmit && tsc -p tsconfig.main.json --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
+    "test": "node --import ./test/ts-resolve.mjs --test test/*.test.ts",
     "package": "npm run build && electron-builder",
     "postinstall": "electron-builder install-app-deps"
   },

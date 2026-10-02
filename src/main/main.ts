@@ -1,5 +1,7 @@
 import { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, nativeImage, dialog, screen, shell } from 'electron';
 import { migrateAppState } from '../shared/migrations';
+import { selectBackupsToPrune, writeFileAtomic } from './backupFiles';
+import { toMarkdown } from './markdownExport';
 import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
@@ -264,7 +266,7 @@ const writeBackupNow = async (data: AppState): Promise<void> => {
 
     // Keep a single "latest" backup to avoid unbounded growth.
     const filePath = path.join(backupDir, 'backup-latest.json');
-    await fs.promises.writeFile(filePath, serializeAppState(data), { encoding: 'utf8' });
+    await writeFileAtomic(filePath, serializeAppState(data));
   } catch (error) {
     // Backups are best-effort and should never break the core save flow.
     console.warn('Failed to write secondary backup:', error);
@@ -297,7 +299,7 @@ const createTimestampedBackup = async (data: AppState, prefix = 'backup'): Promi
     await fs.promises.mkdir(backupDir, { recursive: true });
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filePath = path.join(backupDir, `${prefix}-${timestamp}.json`);
-    await fs.promises.writeFile(filePath, serializeAppState(data), { encoding: 'utf8' });
+    await writeFileAtomic(filePath, serializeAppState(data));
     await cleanupOldBackups(backupDir, 20);
   } catch (error) {
     console.warn('Failed to create timestamped backup:', error);
@@ -308,8 +310,7 @@ const createTimestampedBackup = async (data: AppState, prefix = 'backup'): Promi
 const cleanupOldBackups = async (dir: string, keepCount: number): Promise<void> => {
   try {
     const files = await fs.promises.readdir(dir);
-    const backupFiles = files.filter(f => f.match(/^(backup|startup|pre-save|shutdown|emergency)-.*\.json$/)).sort().reverse();
-    for (const file of backupFiles.slice(keepCount)) {
+    for (const file of selectBackupsToPrune(files, keepCount)) {
       await fs.promises.unlink(path.join(dir, file)).catch(() => {});
     }
   } catch { /* ignore */ }
@@ -504,68 +505,6 @@ ipcMain.handle(IPC_CHANNELS.EXPORT_JSON, async (_event, data: AppState, options?
     return { success: false, error: String(error) };
   }
 });
-
-const escapeMarkdown = (value: string): string => {
-  // Avoid turning headings/lists/emphasis into markdown syntax unexpectedly.
-  // 1) escape backslashes, then 2) escape common markdown control chars.
-  return value.replace(/\\/g, '\\\\').replace(/([[[*_`\]])/g, '\\$1');
-};
-
-const formatDate = (date: Date): string => {
-  // Manager-friendly: YYYY-MM-DD
-  return date.toISOString().slice(0, 10);
-};
-
-const toMarkdown = (data: AppState): string => {
-  const active = data.items.filter((i) => !i.isCompleted);
-  const discussed = data.items.filter((i) => i.isCompleted);
-
-  const lines: string[] = [];
-  lines.push(`# NeoQueue Export`);
-  lines.push('');
-  lines.push(`Generated: ${formatDate(new Date())}`);
-  lines.push('');
-
-  const renderSection = (title: string, sectionItems: typeof data.items) => {
-    lines.push(`## ${title}`);
-    lines.push('');
-
-    if (sectionItems.length === 0) {
-      lines.push('_No items._');
-      lines.push('');
-      return;
-    }
-
-    sectionItems.forEach((item, idx) => {
-      const created = item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt);
-      const completed = item.completedAt
-        ? item.completedAt instanceof Date
-          ? item.completedAt
-          : new Date(item.completedAt)
-        : undefined;
-
-      const header = `${idx + 1}. ${escapeMarkdown(item.text)}`;
-      lines.push(header);
-      lines.push(`   - Created: ${formatDate(created)}`);
-      if (completed) lines.push(`   - Discussed: ${formatDate(completed)}`);
-
-      if (item.followUps?.length) {
-        lines.push('   - Follow-ups:');
-        item.followUps.forEach((fu) => {
-          const fuCreated = fu.createdAt instanceof Date ? fu.createdAt : new Date(fu.createdAt);
-          lines.push(`     - ${escapeMarkdown(fu.text)} _(${formatDate(fuCreated)})_`);
-        });
-      }
-
-      lines.push('');
-    });
-  };
-
-  renderSection('Active', active);
-  renderSection('Discussed', discussed);
-
-  return lines.join('\n');
-};
 
 ipcMain.handle(IPC_CHANNELS.EXPORT_MARKDOWN, async (_event, data: AppState, options?: ExportOptions) => {
   try {

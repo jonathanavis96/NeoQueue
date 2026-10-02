@@ -291,7 +291,7 @@ export const migrateAppState = (raw: unknown): AppState => {
       .map((cmd) => ({
         id: cmd.id as string,
         text: cmd.text as string,
-        createdAt: cmd.createdAt ? new Date(cmd.createdAt as string) : new Date(),
+        createdAt: coerceDate(cmd.createdAt, new Date()),
       }));
   }
 

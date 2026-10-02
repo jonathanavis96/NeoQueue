@@ -17,6 +17,7 @@ import {
 } from '../../shared/types';
 import { CURRENT_APP_STATE_VERSION } from '../../shared/migrations';
 import { extractLearnedTokens } from '../../shared/dictionary';
+import { applyDateRange } from '../../shared/dateRange';
 
 type UndoSnapshot = {
   items: QueueItem[];
@@ -354,40 +355,6 @@ export const useQueueData = (): UseQueueDataResult => {
     }
   }, [commands, items, saveData, settings]);
 
-  const parseYyyyMmDd = useCallback((value: string): Date | null => {
-    const match = /^\d{4}-\d{2}-\d{2}$/.exec(value.trim());
-    if (!match) return null;
-
-    const date = new Date(`${value}T00:00:00.000Z`);
-    return Number.isNaN(date.getTime()) ? null : date;
-  }, []);
-
-  const applyDateRange = useCallback((sourceItems: QueueItem[], dateRange: ExportDateRange): QueueItem[] => {
-    const from = dateRange.from ? parseYyyyMmDd(dateRange.from) : null;
-    const to = dateRange.to ? parseYyyyMmDd(dateRange.to) : null;
-
-    if ((dateRange.from && !from) || (dateRange.to && !to)) {
-      throw new Error('Invalid date range: use YYYY-MM-DD');
-    }
-
-    if (from && to && from.getTime() > to.getTime()) {
-      throw new Error('Invalid date range: start date is after end date');
-    }
-
-    // Inclusive end date: treat as end-of-day.
-    const toInclusive = to ? new Date(to.getTime() + 24 * 60 * 60 * 1000 - 1) : null;
-
-    return sourceItems.filter((item) => {
-      const raw = (dateRange.field === 'createdAt' ? item.createdAt : item.completedAt) as Date | undefined;
-      if (!raw) return false;
-
-      const ts = raw.getTime();
-      if (from && ts < from.getTime()) return false;
-      if (toInclusive && ts > toInclusive.getTime()) return false;
-      return true;
-    });
-  }, [parseYyyyMmDd]);
-
   const buildScopedAppState = useCallback((scope: ExportScope, dateRange?: ExportDateRange): AppState => {
     const scopeItems =
       scope === 'active'
@@ -399,7 +366,7 @@ export const useQueueData = (): UseQueueDataResult => {
     const finalItems = dateRange ? applyDateRange(scopeItems, dateRange) : scopeItems;
 
     return buildAppStateForExport(finalItems, settings, commands, projects);
-  }, [applyDateRange, buildAppStateForExport, commands, items, projects, settings]);
+  }, [buildAppStateForExport, commands, items, projects, settings]);
 
   const exportJsonScopedDateRange = useCallback(
     async (scope: ExportScope, dateRange: ExportDateRange) => {
