@@ -5,6 +5,7 @@ import { QuickCapture, SearchBox, QueueItemList, HelpPanel, TitleBar, CommandsDr
 import type { QuickCaptureRef } from './components/QuickCapture';
 import type { SearchBoxRef } from './components/SearchBox';
 import { DEFAULT_PROJECT_ID } from '../shared/types';
+import { resolveActiveProjectId } from '../shared/activeProject';
 
 const HELP_DISMISSED_KEY = 'neoqueue.help.dismissed';
 
@@ -175,11 +176,10 @@ const App: React.FC = () => {
     onUndo: handleUndo,
   });
 
-  // Restore activeProjectId from settings on load
+  // Restore activeProjectId from settings on load, and leave a project that no
+  // longer exists (deleted, or replaced by an import)
   useEffect(() => {
-    if (settings?.activeProjectId && projects.find(p => p.id === settings.activeProjectId)) {
-      setActiveProjectId(settings.activeProjectId);
-    }
+    setActiveProjectId((current) => resolveActiveProjectId(current, settings?.activeProjectId, projects));
   }, [settings?.activeProjectId, projects]);
 
   // Save activeProjectId when it changes
@@ -415,6 +415,11 @@ const App: React.FC = () => {
         experimentalFlags={experimentalFlags}
         onToggleExperimentalFlag={(key, enabled) => {
           void setExperimentalFlag(key, enabled);
+          // useQueueData writes its own copy of settings on every save, so it has
+          // to hear about the flag or the next save would drop it.
+          void updateSettings({
+            experimentalFlags: { ...settings?.experimentalFlags, [key]: enabled },
+          });
         }}
         matrixRainEnabled={matrixRainEnabled}
         matrixRainIntensity={matrixRainIntensity}

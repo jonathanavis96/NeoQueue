@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, nativeImage, dialog, screen, shell } from 'electron';
 import { migrateAppState } from '../shared/migrations';
-import { selectBackupsToPrune, writeFileAtomic } from './backupFiles';
+import { createQuitHandler, selectBackupsToPrune, validateDataBeforeSave, writeFileAtomic } from './backupFiles';
 import { toMarkdown } from './markdownExport';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -332,26 +332,16 @@ const createStartupBackup = async (): Promise<void> => {
   }
 };
 
-/** Validate that new data doesn't represent catastrophic loss. */
-const validateDataBeforeSave = (newData: AppState, existingData: AppState | null): { valid: boolean; reason?: string } => {
-  if (!existingData) return { valid: true };
-  const existingCount = existingData.items?.length ?? 0;
-  const newCount = newData.items?.length ?? 0;
-  if (existingCount > 5 && newCount === 0) {
-    return { valid: false, reason: `Blocked: would delete all ${existingCount} items` };
-  }
-  return { valid: true };
-};
-
 // State tracking for data protection
 let lastKnownGoodState: AppState | null = null;
+let lastLoadFailed = false;
 let startupBackupDone = false;
 let lastPreSaveBackupTime: number | null = null;
 // IPC Handlers for data persistence
 ipcMain.handle(IPC_CHANNELS.SAVE_DATA, async (_event, data: AppState) => {
   try {
     // Validate before saving to prevent catastrophic data loss
-    const validation = validateDataBeforeSave(data, lastKnownGoodState);
+    const validation = validateDataBeforeSave(data, lastKnownGoodState, lastLoadFailed);
     if (!validation.valid) {
       console.error(`[NeoQueue] ${validation.reason}`);
       if (lastKnownGoodState) await createTimestampedBackup(lastKnownGoodState, 'emergency');
@@ -390,10 +380,12 @@ ipcMain.handle(IPC_CHANNELS.LOAD_DATA, async () => {
     const migrated = migrateAppState(raw);
     store.set('appState', migrated);
     lastKnownGoodState = migrated;
+    lastLoadFailed = false;
     console.log(`[NeoQueue] Loaded ${migrated.items?.length ?? 0} items`);
     return { success: true, data: migrated };
   } catch (error) {
     console.error('[NeoQueue] Failed to load data:', error);
+    lastLoadFailed = true;
     return { success: false, error: String(error) };
   }
 });
@@ -570,6 +562,10 @@ ipcMain.handle(IPC_CHANNELS.IMPORT_JSON, async () => {
     }
 
     store.set('appState', normalized);
+    // Without this, save validation and emergency backups keep judging against
+    // the data that was just replaced.
+    lastKnownGoodState = normalized;
+    lastLoadFailed = false;
     scheduleSecondaryBackup(normalized);
 
     return { success: true, data: normalized };
@@ -1016,9 +1012,7 @@ app.on('window-all-closed', () => {
   }
 });
 
-// Mark that we are intentionally quitting (not just hiding on close-to-tray).
-app.on('before-quit', async () => {
-  isQuitting = true;
+const runFinalBackup = async (): Promise<void> => {
   // Flush pending backup immediately
   if (pendingBackupTimer) {
     clearTimeout(pendingBackupTimer);
@@ -1033,6 +1027,18 @@ app.on('before-quit', async () => {
     await createTimestampedBackup(lastKnownGoodState, 'shutdown');
     console.log('[NeoQueue] Shutdown backup created');
   }
+};
+
+const holdQuitForBackup = createQuitHandler({
+  runFinalBackup,
+  quit: () => app.quit(),
+  timeoutMs: 5000,
+});
+
+// Mark that we are intentionally quitting (not just hiding on close-to-tray).
+app.on('before-quit', (event) => {
+  isQuitting = true;
+  holdQuitForBackup(event);
 });
 
 app.on('will-quit', () => {

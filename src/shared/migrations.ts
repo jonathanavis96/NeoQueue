@@ -166,7 +166,7 @@ const migrateQueueItem = (raw: unknown): QueueItem | null => {
     .filter((fu): fu is FollowUp => Boolean(fu));
 
   // Project ID - default to DEFAULT_PROJECT_ID for legacy items
-  const projectId = coerceString(raw.projectId, DEFAULT_PROJECT_ID);
+  const projectId = coerceString(raw.projectId, '').trim() || DEFAULT_PROJECT_ID;
 
   return {
     id,
@@ -207,7 +207,7 @@ const migrateProject = (raw: unknown): Project | null => {
 };
 
 /** Create the default project that always exists */
-const createDefaultProject = (): Project => ({
+export const createDefaultProject = (): Project => ({
   id: DEFAULT_PROJECT_ID,
   name: 'Default',
   createdAt: new Date(),
@@ -276,6 +276,13 @@ export const migrateAppState = (raw: unknown): AppState => {
     projects.unshift(createDefaultProject());
   }
 
+  // An item is only reachable through its project's tab, so one pointing at a
+  // project that no longer exists would be invisible. Bring it back to Default.
+  const knownProjectIds = new Set(projects.map((p) => p.id));
+  const visibleItems = normalizedItems.map((item) =>
+    knownProjectIds.has(item.projectId) ? item : { ...item, projectId: DEFAULT_PROJECT_ID }
+  );
+
   const dictionary = migrateLearnedDictionary((asObject as Record<string, unknown>).dictionary);
   const settings = migrateSettings((asObject as Record<string, unknown>).settings);
 
@@ -299,11 +306,45 @@ export const migrateAppState = (raw: unknown): AppState => {
   void fromVersion; // reserved for future stepwise migrations
 
   return {
-    items: normalizedItems,
+    items: visibleItems,
     commands,
     projects,
     dictionary,
     settings,
     version: CURRENT_APP_STATE_VERSION,
   };
+};
+
+/**
+ * Turn an AppState that crossed IPC into what the renderer holds in memory:
+ * real Date objects, and a project list that always includes Default.
+ *
+ * Load and import both go through here so neither can forget a field.
+ */
+export const hydrateAppState = (data: AppState) => {
+  const items: QueueItem[] = (data.items ?? []).map((item) => ({
+    ...item,
+    createdAt: new Date(item.createdAt),
+    completedAt: item.completedAt ? new Date(item.completedAt) : undefined,
+    followUps: (item.followUps ?? []).map((fu) => ({
+      ...fu,
+      createdAt: new Date(fu.createdAt),
+    })),
+  }));
+
+  const commands: SavedCommand[] = (data.commands ?? []).map((cmd) => ({
+    ...cmd,
+    createdAt: new Date(cmd.createdAt),
+  }));
+
+  const projects: Project[] = (data.projects ?? []).map((proj) => ({
+    ...proj,
+    createdAt: new Date(proj.createdAt),
+    completedAt: proj.completedAt ? new Date(proj.completedAt) : undefined,
+  }));
+  if (!projects.some((p) => p.id === DEFAULT_PROJECT_ID)) {
+    projects.unshift(createDefaultProject());
+  }
+
+  return { items, commands, projects, settings: data.settings };
 };

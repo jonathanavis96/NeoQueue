@@ -73,6 +73,7 @@ npm run package
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+N` / `Cmd+N` | Focus new item input |
+| `Ctrl+Z` / `Cmd+Z` | Undo the last list change (inside a text field with text in it, undoes your typing instead) |
 | `Enter` | Add item / confirm |
 | `Escape` | Cancel / close |
 | `Tab` | Navigate between interactive controls |

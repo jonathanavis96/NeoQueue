@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import {
+import type {
   QueueItem,
   SavedCommand,
   AppState,
@@ -13,11 +13,12 @@ import {
   ExportDateRange,
   ExportOptions,
   Project,
-  DEFAULT_PROJECT_ID,
 } from '../../shared/types';
-import { CURRENT_APP_STATE_VERSION } from '../../shared/migrations';
+import { DEFAULT_PROJECT_ID } from '../../shared/types';
+import { CURRENT_APP_STATE_VERSION, createDefaultProject, hydrateAppState } from '../../shared/migrations';
 import { extractLearnedTokens } from '../../shared/dictionary';
 import { applyDateRange } from '../../shared/dateRange';
+import { mergeReorderedItems } from '../../shared/reorderItems';
 
 type UndoSnapshot = {
   items: QueueItem[];
@@ -39,9 +40,9 @@ interface UseQueueDataResult {
   deleteItem: (id: string) => Promise<void>;
   toggleComplete: (id: string) => Promise<void>;
   addFollowUp: (itemId: string, text: string) => Promise<void>;
-  /** Reorder queue items (for drag-and-drop). */
-  reorderItems: (newItems: QueueItem[]) => Promise<void>;
-  /** Single-step undo for the most recent destructive action (in-memory only). */
+  /** Reorder the items currently in view (for drag-and-drop); all others stay put. */
+  reorderItems: (visibleInNewOrder: QueueItem[]) => Promise<void>;
+  /** Single-step undo of the most recent item change (in-memory only). */
   canUndo: boolean;
   undo: () => Promise<void>;
   exportJson: () => Promise<void>;
@@ -82,14 +83,6 @@ const generateId = (): string => {
   });
 };
 
-/** Create the default project */
-const createDefaultProject = (): Project => ({
-  id: DEFAULT_PROJECT_ID,
-  name: 'Default',
-  createdAt: new Date(),
-  isCompleted: false,
-});
-
 export const useQueueData = (): UseQueueDataResult => {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [commands, setCommands] = useState<SavedCommand[]>([]);
@@ -115,43 +108,11 @@ export const useQueueData = (): UseQueueDataResult => {
 
         const response = await window.electronAPI.loadData();
         if (response.success && response.data) {
-          setSettings(response.data.settings);
-
-          // Guard against undefined/null items array (corrupted or empty store)
-          const rawItems = response.data.items ?? [];
-
-          // Convert date strings back to Date objects
-          const itemsWithDates = rawItems.map((item) => ({
-            ...item,
-            createdAt: new Date(item.createdAt),
-            completedAt: item.completedAt ? new Date(item.completedAt) : undefined,
-            followUps: (item.followUps ?? []).map((fu) => ({
-              ...fu,
-              createdAt: new Date(fu.createdAt),
-            })),
-          }));
-          setItems(itemsWithDates);
-
-          // Load saved commands
-          const rawCommands = response.data.commands ?? [];
-          const commandsWithDates = rawCommands.map((cmd) => ({
-            ...cmd,
-            createdAt: new Date(cmd.createdAt),
-          }));
-          setCommands(commandsWithDates);
-
-          // Load projects
-          const rawProjects = response.data.projects ?? [];
-          let projectsWithDates = rawProjects.map((proj) => ({
-            ...proj,
-            createdAt: new Date(proj.createdAt),
-            completedAt: proj.completedAt ? new Date(proj.completedAt) : undefined,
-          }));
-          // Ensure default project exists
-          if (!projectsWithDates.find(p => p.id === DEFAULT_PROJECT_ID)) {
-            projectsWithDates = [createDefaultProject(), ...projectsWithDates];
-          }
-          setProjects(projectsWithDates);
+          const hydrated = hydrateAppState(response.data);
+          setSettings(hydrated.settings);
+          setItems(hydrated.items);
+          setCommands(hydrated.commands);
+          setProjects(hydrated.projects);
         } else if (!response.success) {
           setError(response.error || 'Failed to load data');
         }
@@ -261,6 +222,7 @@ export const useQueueData = (): UseQueueDataResult => {
 
     try {
       await saveData(newItems, settings, commands);
+      setUndoSnapshot({ items: prevItems, label: 'edit' });
     } catch (err) {
       setItems(prevItems);
       setError(String(err));
@@ -336,6 +298,7 @@ export const useQueueData = (): UseQueueDataResult => {
 
     try {
       await saveData(newItems, settings, commands);
+      setUndoSnapshot({ items: prevItems, label: 'followUp' });
     } catch (err) {
       setItems(prevItems);
       setError(String(err));
@@ -343,12 +306,14 @@ export const useQueueData = (): UseQueueDataResult => {
   }, [commands, items, saveData, settings]);
 
   // Reorder queue items (for drag-and-drop)
-  const reorderItems = useCallback(async (newItems: QueueItem[]) => {
+  const reorderItems = useCallback(async (visibleInNewOrder: QueueItem[]) => {
     const prevItems = items;
+    const newItems = mergeReorderedItems(prevItems, visibleInNewOrder);
     setItems(newItems);
 
     try {
       await saveData(newItems, settings, commands);
+      setUndoSnapshot({ items: prevItems, label: 'reorder' });
     } catch (err) {
       setItems(prevItems);
       setError(String(err));
@@ -566,29 +531,11 @@ export const useQueueData = (): UseQueueDataResult => {
 
       if (response.canceled || !response.data) return;
 
-      // Guard against undefined/null items array (corrupted import file)
-      const rawItems = response.data.items ?? [];
-
-      const importedItems = rawItems.map((item) => ({
-        ...item,
-        createdAt: new Date(item.createdAt),
-        completedAt: item.completedAt ? new Date(item.completedAt) : undefined,
-        followUps: (item.followUps ?? []).map((fu) => ({
-          ...fu,
-          createdAt: new Date(fu.createdAt),
-        })),
-      }));
-
-      // Import commands if present
-      const rawCommands = response.data.commands ?? [];
-      const importedCommands = rawCommands.map((cmd) => ({
-        ...cmd,
-        createdAt: new Date(cmd.createdAt),
-      }));
-
-      setItems(importedItems);
-      setCommands(importedCommands);
-      setSettings(response.data.settings);
+      const hydrated = hydrateAppState(response.data);
+      setItems(hydrated.items);
+      setCommands(hydrated.commands);
+      setProjects(hydrated.projects);
+      setSettings(hydrated.settings);
       setUndoSnapshot(null);
       setError(null);
     } catch (err) {
@@ -654,6 +601,8 @@ export const useQueueData = (): UseQueueDataResult => {
 
     try {
       await saveData(newItems, settings, commands, newProjects);
+      // The snapshot may still point items at the project that just went away.
+      setUndoSnapshot(null);
     } catch (err) {
       setItems(items);
       setProjects(projects);
