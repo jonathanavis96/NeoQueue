@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useCallback } from 'react';
+import { hasEditableText } from './textEntryTarget';
 
 interface UseKeyboardShortcutsOptions {
   onNewItem?: () => void;
@@ -45,8 +46,9 @@ export const useKeyboardShortcuts = ({
       return;
     }
 
-    // Ctrl/Cmd + Z: Undo
+    // Ctrl/Cmd + Z: Undo, unless a text field has its own typing to undo
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+      if (hasEditableText(e.target)) return;
       e.preventDefault();
       onUndo?.();
       return;

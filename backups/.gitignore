@@ -1,5 +1,6 @@
 # Keep backup folder structure but ignore backup data files
 *.json
+*.json.tmp-*
 *.log
 !README.md
 !.gitignore
